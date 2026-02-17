@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Vulscan.Api/Vulscan.Api.csproj" />
+    <Project Path="src/Vulscan.Application/Vulscan.Application.csproj" />
+    <Project Path="src/Vulscan.Domain/Vulscan.Domain.csproj" />
+    <Project Path="src/Vulscan.Infrastructure/Vulscan.Infrastructure.csproj" />
+  </Folder>
+</Solution>

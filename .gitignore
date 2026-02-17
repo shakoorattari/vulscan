@@ -1,0 +1,61 @@
+# .NET
+server/**/bin/
+server/**/obj/
+server/**/*.user
+server/**/*.suo
+server/**/*.cache
+server/**/.vs/
+server/**/TestResults/
+server/**/*.DotSettings.user
+*.nupkg
+*.snupkg
+
+# Angular
+client/node_modules/
+client/dist/
+client/.angular/
+client/.angular/cache/
+client/coverage/
+client/*.log
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+server/src/Vulscan.Api/vulscan.db*
+
+# Logs
+*.log
+logs/
+server/logs/
+
+# IDE
+.idea/
+.vs/
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+*.swp
+*.swo
+*~
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment & Secrets
+*.env
+*.env.local
+appsettings.*.local.json
+appsettings.Development.json
+secrets.json
+
+# Temporary files
+*.tmp
+*.temp
+~$*
