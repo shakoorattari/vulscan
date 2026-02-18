@@ -16,7 +16,7 @@ Use the provided script to create the repository via GitHub API:
 
 ### Step 1: Create GitHub Personal Access Token
 
-1. Go to: https://github.com/settings/tokens/new
+1. Go to: <https://github.com/settings/tokens/new>
 2. Token name: `Vulscan Repository Creation`
 3. Select scopes:
    - ✅ **repo** (Full control of private repositories)
@@ -32,6 +32,7 @@ cd /home/shakoor/projects/vulscan
 ```
 
 The script will:
+
 - Create the repository on GitHub as **public**
 - Add it as remote origin
 - Push all your code to GitHub
@@ -42,7 +43,7 @@ The script will:
 
 ### Step 1: Create Repository on GitHub
 
-1. Go to: https://github.com/new
+1. Go to: <https://github.com/new>
 2. Fill in the details:
    - **Repository name:** `vulscan`
    - **Description:** `🛡️ Vulscan — Enterprise Vulnerability Scanning Platform for Azure DevOps | .NET 10 + Angular 19 | SBOM Generation & CVE Detection`
@@ -67,7 +68,9 @@ git push -u origin main
 After creating the repository, configure these settings on GitHub:
 
 ### Topics/Tags
+
 Add these topics to make your repository discoverable:
+
 - `vulnerability-scanning`
 - `sbom`
 - `cyclonedx`
@@ -79,12 +82,15 @@ Add these topics to make your repository discoverable:
 - `dependency-scanning`
 
 ### About Section
+
 **Website:** (Add your deployment URL if you have one)
 
 **Topics:** vulnerability-scanning, sbom, security, dotnet, angular, azure-devops
 
 ### Branch Protection (Optional but Recommended)
+
 If working in a team, enable branch protection for `main`:
+
 1. Go to: Settings → Branches → Add rule
 2. Branch name pattern: `main`
 3. Enable:
@@ -92,6 +98,7 @@ If working in a team, enable branch protection for `main`:
    - ✅ Require status checks to pass before merging
 
 ### Repository Features
+
 - ✅ Issues — For bug tracking
 - ✅ Projects — For feature planning
 - ✅ Wiki — For additional documentation (optional)
@@ -100,7 +107,7 @@ If working in a team, enable branch protection for `main`:
 
 ## 📂 What's Included in the Repository
 
-```
+```text
 vulscan/
 ├── .github/                   # GitHub metadata & Copilot instructions
 ├── server/                    # .NET 10 Backend API
@@ -118,7 +125,7 @@ vulscan/
 
 ## 🔐 Security Considerations
 
-### ⚠️ Before Pushing, Verify:
+### ⚠️ Before Pushing, Verify
 
 ```bash
 # Check that no sensitive files are staged
@@ -135,6 +142,7 @@ grep -r "Admin@123!" . --exclude-dir=.git --exclude-dir=node_modules
 ### 🛡️ Secrets Management
 
 The following are already excluded by `.gitignore`:
+
 - ✅ Database files (`*.db`, `*.sqlite`)
 - ✅ Environment files (`*.env`)
 - ✅ Local config (`appsettings.*.local.json`)
@@ -145,6 +153,7 @@ The following are already excluded by `.gitignore`:
 ### 🔄 Rotate Credentials
 
 After making the repository public, consider:
+
 1. Change the default admin password (`Admin@123!`)
 2. Rotate JWT secret key in `appsettings.json`
 3. Update any PAT tokens stored for Azure DevOps instances
@@ -174,28 +183,34 @@ After making the repository public, consider:
 ## ❓ Troubleshooting
 
 ### "Repository already exists"
+
 If the repository name is taken, either:
+
 - Delete the existing repo on GitHub, or
 - Choose a different name and update the script
 
 ### "Permission denied (publickey)"
+
 If using SSH, you need to set up SSH keys:
+
 ```bash
 # Use HTTPS instead
 git remote set-url origin https://github.com/YOUR_USERNAME/vulscan.git
 ```
 
 ### "Connection refused"
+
 Check your internet connection and GitHub status:
-- https://www.githubstatus.com/
+
+- <https://www.githubstatus.com/>
 
 ---
 
 ## 📞 Need Help?
 
-- GitHub Docs: https://docs.github.com/
-- Git Reference: https://git-scm.com/docs
+- GitHub Docs: <https://docs.github.com/>
+- Git Reference: <https://git-scm.com/docs>
 
 ---
 
-**Ready to share your security platform with the world! 🚀**
+## Ready to share your security platform with the world! 🚀

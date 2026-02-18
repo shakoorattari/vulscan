@@ -5,6 +5,7 @@ A comprehensive vulnerability scanning and management platform for Azure DevOps 
 ## 🌟 Features
 
 ### ✅ Core Capabilities
+
 - **Automated Repository Discovery** — Scans Azure DevOps instances to discover all projects and repositories
 - **SBOM Generation** — Creates CycloneDX-compliant Software Bill of Materials for each repository
 - **Multi-Ecosystem Support** — Supports npm (Node.js) and NuGet (.NET) package ecosystems
@@ -14,6 +15,7 @@ A comprehensive vulnerability scanning and management platform for Azure DevOps 
 - **CSV Export** — Machine-readable reports for packages and vulnerabilities
 
 ### 📊 Dashboard & Analytics
+
 - Executive dashboard with KPI cards and vulnerability breakdowns
 - Scan history with status tracking
 - Ecosystem breakdown statistics
@@ -21,6 +23,7 @@ A comprehensive vulnerability scanning and management platform for Azure DevOps 
 - Drill-down reports for projects and CVEs
 
 ### 🔐 Security & Authentication
+
 - JWT-based authentication
 - Role-based access control (Admin/User)
 - Secure PAT storage for Azure DevOps instances
@@ -28,19 +31,22 @@ A comprehensive vulnerability scanning and management platform for Azure DevOps 
 ## 🏗️ Architecture
 
 ### Backend
+
 - **.NET 10 + ASP.NET Core Web API** — High-performance REST API
 - **Clean Architecture** — Domain-driven design with separation of concerns
 - **SQLite Database** — Lightweight with Entity Framework Core
 - **Serilog** — Structured logging to console and file
 
 ### Frontend
+
 - **Angular 19+** — Modern SPA with standalone components
 - **Angular Material** — Responsive Material Design UI
 - **RxJS** — Reactive state management
 - **Lazy Loading** — Optimized bundle sizes with route-based code splitting
 
 ### Project Structure
-```
+
+```text
 vulscan/
 ├── server/               # .NET 10 Web API
 │   └── src/
@@ -60,11 +66,13 @@ vulscan/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 18+](https://nodejs.org/)
 - [Angular CLI](https://angular.io/cli) (`npm install -g @angular/cli`)
 
 ### Backend Setup
+
 ```bash
 cd server
 dotnet restore
@@ -75,10 +83,12 @@ dotnet run --project src/Vulscan.Api/Vulscan.Api.csproj --urls "http://localhost
 The API will be available at `http://localhost:5000`
 
 **Default Admin Credentials:**
+
 - Username: `admin`
 - Password: `Admin@123!`
 
 ### Frontend Setup
+
 ```bash
 cd client
 npm install
@@ -90,22 +100,27 @@ The dashboard will be available at `http://localhost:4200`
 ## 📖 API Endpoints
 
 ### Authentication
+
 - `POST /api/v1/auth/login` — Login with username/password
 
 ### Dashboard
+
 - `GET /api/v1/dashboard/summary` — Executive dashboard summary
 
 ### Scans
+
 - `POST /api/v1/scans/trigger` — Trigger a new scan
 - `GET /api/v1/scans` — Scan history (paginated)
 - `GET /api/v1/scans/{id}` — Scan details
 
 ### Vulnerabilities
+
 - `GET /api/v1/vulnerabilities` — All vulnerabilities (paginated, filterable)
 - `GET /api/v1/vulnerabilities/{id}` — Vulnerability details
 - `PATCH /api/v1/vulnerabilities/{id}/status` — Update status
 
 ### Reports
+
 - `GET /api/v1/reports/executive-summary` — Full executive report
 - `GET /api/v1/reports/projects` — All project summaries
 - `GET /api/v1/reports/projects/{id}` — Detailed project report
@@ -115,6 +130,7 @@ The dashboard will be available at `http://localhost:4200`
 - `GET /api/v1/reports/trends` — Severity trends across scans
 
 ### Instances
+
 - `GET /api/v1/instances` — Azure DevOps instances
 - `POST /api/v1/instances` — Register new instance
 - `PUT /api/v1/instances/{id}` — Update instance
@@ -123,6 +139,7 @@ The dashboard will be available at `http://localhost:4200`
 ## 🗄️ Database Schema
 
 ### Core Entities
+
 - **User** — Authentication and authorization
 - **AzureDevOpsInstance** — Configured ADO instances
 - **Project** — ADO projects
@@ -136,12 +153,14 @@ The dashboard will be available at `http://localhost:4200`
 ## 📊 Current Status
 
 ### Scan Statistics (as of last scan)
+
 - **94 vulnerabilities** detected (4 Critical, 32 High, 58 Medium, 0 Low)
 - **65 repositories** scanned
 - **28,885 packages** analyzed
 - **42 projects** with vulnerabilities
 
 ### Supported Ecosystems
+
 - **npm** — Node.js packages
 - **NuGet** — .NET packages
 
@@ -175,12 +194,14 @@ export const environment = {
 ## 📝 Documentation
 
 Additional documentation is available in the `/docs` directory:
+
 - `brd-v03.md` — Business Requirements Document
 - `work-items/` — Detailed progress tracking for each feature area
 
 ## 🛠️ Technology Stack
 
 **Backend:**
+
 - .NET 10
 - ASP.NET Core Web API
 - Entity Framework Core
@@ -190,6 +211,7 @@ Additional documentation is available in the `/docs` directory:
 - JWT Authentication
 
 **Frontend:**
+
 - Angular 19+
 - Angular Material
 - RxJS
@@ -199,12 +221,14 @@ Additional documentation is available in the `/docs` directory:
 ## 🚧 Roadmap
 
 ### In Progress
+
 - Enhanced vulnerability database integration (NVD, OSV)
 - HTML report generation
 - Email notifications via SMTP
 - Microsoft Teams webhook integration
 
 ### Planned
+
 - Trivy/Grype integration for advanced scanning
 - Scheduled scans with cron expressions
 - Multi-tenancy support
@@ -227,4 +251,4 @@ This is an internal project. For questions or issues, please contact the develop
 
 ---
 
-**Built with ❤️ for security-conscious development teams**
+## Built with ❤️ for security-conscious development teams
