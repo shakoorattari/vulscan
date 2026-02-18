@@ -136,7 +136,7 @@ git check-ignore server/src/Vulscan.Api/vulscan.db
 # Should output: server/src/Vulscan.Api/vulscan.db
 
 # Check for any secrets
-grep -r "Admin@123!" . --exclude-dir=.git --exclude-dir=node_modules
+grep -r "hardcoded_password" . --exclude-dir=.git --exclude-dir=node_modules
 ```
 
 ### 🛡️ Secrets Management
@@ -154,7 +154,7 @@ The following are already excluded by `.gitignore`:
 
 After making the repository public, consider:
 
-1. Change the default admin password (`Admin@123!`)
+1. Change the default admin password (see SECURITY.md)
 2. Rotate JWT secret key in `appsettings.json`
 3. Update any PAT tokens stored for Azure DevOps instances
 

@@ -393,7 +393,7 @@ grype sbom.json --output json > vulnerabilities.json
         "url": "https://devops.ishj.ae/sih",
         "auth_method": "basic",
         "username": "svc_Vulscan",
-        "password_secret_name": "Vulscan/sih-password",
+        "password_secret_name": "xxxx/xxxxxx",
         "domain": "ISHJ",
         "collection": "DefaultCollection",
         "scan_schedule": "0 3 * * *",

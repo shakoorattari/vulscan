@@ -65,6 +65,8 @@ vulscan/
 
 ## 🚀 Getting Started
 
+> 🛡️ **SECURITY FIRST**: Before running the application, read [SECURITY.md](SECURITY.md) for critical security setup requirements!
+
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
@@ -85,7 +87,9 @@ The API will be available at `http://localhost:5000`
 **Default Admin Credentials:**
 
 - Username: `admin`
-- Password: `Admin@123!`
+- Password: `[Generated during setup - see installation guide]`
+
+> ⚠️ **Security Note**: Change the default admin password immediately after first login!
 
 ### Frontend Setup
 
@@ -171,7 +175,7 @@ Backend configuration is in `server/src/Vulscan.Api/appsettings.json`:
 ```json
 {
   "Jwt": {
-    "SecretKey": "your-secret-key-min-32-characters",
+    "SecretKey": "${JWT_SECRET_KEY}",
     "Issuer": "VulscanApi",
     "Audience": "VulscanDashboard",
     "ExpiryHours": 8
@@ -181,6 +185,8 @@ Backend configuration is in `server/src/Vulscan.Api/appsettings.json`:
   }
 }
 ```
+
+> 🔐 **Security**: Use environment variables for sensitive configuration values
 
 Frontend configuration is in `client/src/environments/environment.ts`:
 

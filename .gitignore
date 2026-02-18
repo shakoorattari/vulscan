@@ -31,6 +31,20 @@ server/src/Vulscan.Api/vulscan.db*
 logs/
 server/logs/
 
+# Environment & Security
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+appsettings.local.json
+appsettings.secrets.json
+secrets.json
+*.pem
+*.p12
+*.pfx
+*.key
+
 # IDE
 .idea/
 .vs/
