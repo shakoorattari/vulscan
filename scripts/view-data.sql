@@ -158,13 +158,15 @@ SELECT TOP 20
     v.CveId,
     v.Severity,
     v.CvssScore,
-    dp.Name as PackageName,
-    dp.Version as PackageVersion,
+    v.PackageName,
+    v.InstalledVersion,
+    v.FixedVersion,
     v.Status,
-    v.DiscoveredAt
+    v.FirstDetectedAt,
+    r.Name as RepositoryName
 FROM vulscan.Vulnerabilities v
-LEFT JOIN vulscan.DiscoveredPackages dp ON v.PackageId = dp.Id
-ORDER BY v.DiscoveredAt DESC;
+LEFT JOIN vulscan.Repositories r ON v.RepositoryId = r.Id
+ORDER BY v.FirstDetectedAt DESC;
 
 PRINT '';
 PRINT '==================================================================';
