@@ -28,7 +28,8 @@ nano .env
 ⚠️ **CRITICAL**: Change the default admin password immediately after first login!
 
 1. Start the application
-2. Login with username: `admin` and password: `Vulscan@2025`
+2. Login with username: `admin` and password: `Vulscan@2025`  
+   ⚠️ **DEVELOPMENT ONLY** — **DO NOT USE THIS PASSWORD IN PRODUCTION!**
 3. Navigate to user settings
 4. Change password to a strong, unique password
 
