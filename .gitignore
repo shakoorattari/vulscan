@@ -48,9 +48,6 @@ secrets.json
 # IDE
 .idea/
 .vs/
-.vscode/settings.json
-.vscode/launch.json
-.vscode/tasks.json
 *.swp
 *.swo
 *~
