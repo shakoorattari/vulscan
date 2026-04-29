@@ -70,3 +70,4 @@ secrets.json
 *.tmp
 *.temp
 ~$*
+package-lock.json
