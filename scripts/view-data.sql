@@ -78,8 +78,8 @@ SELECT
     r.Name,
     p.Name as ProjectName,
     r.DefaultBranch,
-    r.RemoteUrl,
-    r.IsActive,
+    r.CloneUrl,
+    r.IsEnabled,
     r.LastScannedAt
 FROM vulscan.Repositories r
 LEFT JOIN vulscan.Projects p ON r.ProjectId = p.Id
@@ -95,16 +95,19 @@ SELECT TOP 10
     sr.Id,
     i.Name as InstanceName,
     sr.Status,
-    sr.StartTime,
-    sr.EndTime,
-    DATEDIFF(SECOND, sr.StartTime, ISNULL(sr.EndTime, GETUTCDATE())) as DurationSeconds,
-    sr.TotalProjects,
-    sr.TotalRepositories,
-    sr.TotalPackages,
-    sr.VulnerabilitiesFound
+    sr.StartedAt,
+    sr.CompletedAt,
+    sr.DurationSeconds,
+    sr.ReposScanned,
+    sr.ReposFailed,
+    sr.TotalVulnerabilities,
+    sr.CriticalCount,
+    sr.HighCount,
+    sr.MediumCount,
+    sr.LowCount
 FROM vulscan.ScanRuns sr
 LEFT JOIN vulscan.AzureDevOpsInstances i ON sr.InstanceId = i.Id
-ORDER BY sr.StartTime DESC;
+ORDER BY sr.StartedAt DESC;
 
 PRINT '';
 PRINT '==================================================================';
