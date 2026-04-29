@@ -29,12 +29,12 @@ public class DiscoveredPackageConfiguration : IEntityTypeConfiguration<Discovere
         builder.HasOne(p => p.ScanRun)
             .WithMany()
             .HasForeignKey(p => p.ScanRunId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.HasOne(p => p.Repository)
             .WithMany()
             .HasForeignKey(p => p.RepositoryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.HasOne(p => p.Sbom)
             .WithMany()

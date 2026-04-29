@@ -87,7 +87,7 @@ The API will be available at `http://localhost:5000`
 **Default Admin Credentials:**
 
 - Username: `admin`
-- Password: `[Generated during setup - see installation guide]`
+- Password: `Vulscan@2025`
 
 > ⚠️ **Security Note**: Change the default admin password immediately after first login!
 

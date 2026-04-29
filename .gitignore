@@ -30,6 +30,7 @@ server/src/Vulscan.Api/vulscan.db*
 *.log
 logs/
 server/logs/
+server/src/Vulscan.Api/logs/
 
 # Environment & Security
 .env
@@ -39,11 +40,19 @@ server/logs/
 .env.staging
 appsettings.local.json
 appsettings.secrets.json
+appsettings.Development.json
 secrets.json
 *.pem
 *.p12
 *.pfx
 *.key
+
+# Test files
+*.csx
+test-*.cs
+verify-*.cs
+**/test-password.*
+**/verify-pass.*
 
 # IDE
 .idea/

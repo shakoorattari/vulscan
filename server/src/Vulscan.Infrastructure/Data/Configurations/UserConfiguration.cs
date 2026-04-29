@@ -7,9 +7,10 @@ namespace Vulscan.Infrastructure.Data.Configurations;
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     // Pre-computed BCrypt hash for default admin password with workfactor 12
-    // SECURITY: Change this password immediately after deployment!
+    // DEFAULT PASSWORD (DEVELOPMENT ONLY): Vulscan@2025
+    // ⚠️ SECURITY: Change this password immediately after deployment!
     // This is static to avoid EF Core migration warnings about dynamic values
-    private const string AdminPasswordHash = "$2a$12$OOF3yNNPWG8p2JnOjF4V5u83Oc..5jM7H5vvgNd7cJc5PQG.DLhVW";
+    private const string AdminPasswordHash = "$2a$12$6iQL3yNjcPI40mMYzoinqOMnbCf6sIwyu2iQczG7DCK19bEAezyp.";
 
     public void Configure(EntityTypeBuilder<User> builder)
     {
