@@ -1,38 +1,275 @@
-
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
+// Angular Material theming with brand-aligned palette inspired by Mint design system.
 @use '@angular/material' as mat;
+
+/* ─────────────────────────────────────────────────────────────────
+ * Brand tokens — single source of truth for the entire UI.
+ * Inspired by the Mint palette: teal-forward, warm accents,
+ * cool neutrals, deep navy for surfaces.
+ * ─────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand */
+  --brand-teal: #119c8c;
+  --brand-teal-600: #0d8579;
+  --brand-teal-700: #0a6d63;
+  --brand-teal-50: #e5eeec;
+  --brand-teal-100: #c6dedb;
+
+  --brand-navy: #242536;
+  --brand-navy-700: #1c1d2b;
+  --brand-navy-50: #eef0f5;
+
+  --brand-gold: #d3924b;
+  --brand-rust: #9c5638;
+  --brand-peach: #d79e80;
+  --brand-peach-50: #fbeee5;
+
+  --neutral-100: #f5f7f8;
+  --neutral-200: #e8ecee;
+  --neutral-300: #b5bfc1;
+  --neutral-500: #8e9b9f;
+  --neutral-700: #4a565a;
+  --neutral-900: #1f2628;
+
+  /* Severity (mint-inspired warm scale) */
+  --sev-critical: #b71c1c;
+  --sev-critical-bg: #fde2e2;
+  --sev-high: #9c5638;
+  --sev-high-bg: #fbeee5;
+  --sev-medium: #d3924b;
+  --sev-medium-bg: #fdf3e6;
+  --sev-low: #119c8c;
+  --sev-low-bg: #d8eeeb;
+
+  /* Status */
+  --status-success: #119c8c;
+  --status-success-bg: #d8eeeb;
+  --status-warn: #d3924b;
+  --status-warn-bg: #fdf3e6;
+  --status-error: #b71c1c;
+  --status-error-bg: #fde2e2;
+  --status-info: #3a4a8a;
+  --status-info-bg: #e3e8f7;
+
+  /* Surfaces */
+  --surface-page: #f5f7f8;
+  --surface-card: #ffffff;
+  --surface-tint: #e5eeec;
+
+  /* Effects */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-xs: 0 1px 2px rgba(36, 37, 54, 0.06);
+  --shadow-sm: 0 1px 2px rgba(36, 37, 54, 0.05), 0 2px 8px rgba(36, 37, 54, 0.05);
+  --shadow-md: 0 2px 4px rgba(36, 37, 54, 0.06), 0 12px 24px rgba(36, 37, 54, 0.08);
+  --shadow-lg: 0 4px 8px rgba(36, 37, 54, 0.08), 0 20px 40px rgba(36, 37, 54, 0.12);
+
+  --gradient-brand: linear-gradient(135deg, #119c8c 0%, #0a6d63 100%);
+  --gradient-warm: linear-gradient(135deg, #d3924b 0%, #9c5638 100%);
+  --gradient-navy: linear-gradient(180deg, #242536 0%, #1c1d2b 100%);
+}
 
 html {
   height: 100%;
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$cyan-palette,
+        tertiary: mat.$orange-palette,
+      ),
+      typography: (
+        plain-family: 'Inter, "Segoe UI", Roboto, system-ui, -apple-system, sans-serif',
+        brand-family: 'Inter, "Segoe UI", Roboto, system-ui, -apple-system, sans-serif',
+      ),
+      density: 0,
+    )
+  );
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
   color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
+  background-color: var(--surface-page);
+  color: var(--neutral-900);
+  font-family: 'Inter', 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
   margin: 0;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-/* You can add global styles to this file, and also import other style files */
+
+/* ─────────────────────────────────────────────────────────────────
+ * Material system token overrides → align Material primary with
+ * the brand teal globally so every primary button, focus ring,
+ * tab indicator, slider, etc. uses our color.
+ * ─────────────────────────────────────────────────────────────── */
+:root {
+  --mat-sys-primary: var(--brand-teal);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: var(--brand-teal-50);
+  --mat-sys-on-primary-container: var(--brand-teal-700);
+  --mat-sys-secondary: var(--brand-gold);
+  --mat-sys-tertiary: var(--brand-rust);
+  --mat-sys-surface: var(--surface-card);
+  --mat-sys-surface-container: var(--surface-tint);
+  --mat-sys-surface-container-high: #ffffff;
+  --mat-sys-on-surface: var(--neutral-900);
+  --mat-sys-on-surface-variant: var(--neutral-700);
+  --mat-sys-outline: var(--neutral-300);
+  --mat-sys-outline-variant: var(--neutral-200);
+}
+
+.mat-mdc-raised-button,
+.mat-mdc-flat-button,
+.mat-mdc-stroked-button,
+.mat-mdc-button {
+  border-radius: 10px !important;
+  letter-spacing: 0.01em;
+}
+
+.mat-mdc-flat-button.mat-primary,
+.mat-mdc-raised-button.mat-primary {
+  --mdc-filled-button-container-color: var(--brand-teal);
+  --mdc-protected-button-container-color: var(--brand-teal);
+}
+
+.mat-mdc-card {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--neutral-200);
+}
+
+.mat-mdc-form-field.mat-focused .mdc-notched-outline > * {
+  border-color: var(--brand-teal) !important;
+}
+
+.mat-mdc-tab-group {
+  --mat-tab-header-active-label-text-color: var(--brand-teal);
+  --mat-tab-header-active-focus-label-text-color: var(--brand-teal);
+  --mat-tab-header-active-hover-label-text-color: var(--brand-teal);
+  --mat-tab-header-active-indicator-color: var(--brand-teal);
+}
+
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: var(--brand-navy);
+  --mdc-snackbar-supporting-text-color: #fff;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Print styles — used by Scan Report page for PDF generation.
+ * ─────────────────────────────────────────────────────────────── */
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print,
+  app-layout > mat-sidenav-container > mat-sidenav,
+  .top-toolbar,
+  .mat-mdc-tab-header,
+  button {
+    display: none !important;
+  }
+  .content-area {
+    padding: 0 !important;
+  }
+  .mat-mdc-card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+  }
+}
+
+.print-only {
+  display: none;
+}
+@media print {
+  .print-only {
+    display: block;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * ng-select theming aligned with Mint palette
+ * ─────────────────────────────────────────────────────────────── */
+@import "@ng-select/ng-select/themes/default.theme.css";
+
+.ng-select.vs-select {
+  font-family: inherit;
+  font-size: 13px;
+  min-width: 180px;
+}
+.ng-select.vs-select .ng-select-container {
+  min-height: 40px;
+  border-radius: 10px;
+  border-color: rgba(0, 0, 0, 0.18);
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ng-select.vs-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container,
+.ng-select.vs-select .ng-select-container:hover {
+  border-color: var(--mint-primary, #119c8c);
+  box-shadow: 0 0 0 3px rgba(17, 156, 140, 0.12);
+}
+.ng-select.vs-select.ng-select-opened > .ng-select-container {
+  border-color: var(--mint-primary, #119c8c);
+  box-shadow: 0 0 0 3px rgba(17, 156, 140, 0.18);
+}
+.ng-select.vs-select .ng-placeholder {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+.ng-select.vs-select .ng-value-container .ng-value {
+  font-weight: 600;
+  color: #242536;
+}
+.ng-select.vs-select .ng-arrow-wrapper {
+  color: var(--mint-primary, #119c8c);
+}
+.ng-select.vs-select .ng-clear-wrapper {
+  color: rgba(0, 0, 0, 0.5);
+}
+.ng-dropdown-panel.ng-select-bottom {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  margin-top: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #242536;
+}
+.ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-marked {
+  background: rgba(17, 156, 140, 0.08);
+  color: var(--mint-primary, #119c8c);
+}
+.ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-selected {
+  background: rgba(17, 156, 140, 0.16);
+  color: var(--mint-primary, #119c8c);
+  font-weight: 600;
+}
+.ng-dropdown-panel .ng-dropdown-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fafbfc;
+}
+
+/* multi-select chips */
+.ng-select.vs-select.ng-select-multiple .ng-value {
+  background: rgba(17, 156, 140, 0.12);
+  color: var(--mint-primary, #119c8c);
+  border-radius: 12px;
+  padding: 2px 4px 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 2px 4px 2px 0;
+}
+.ng-select.vs-select.ng-select-multiple .ng-value .ng-value-icon {
+  border-right: none;
+  padding: 0 6px;
+  color: var(--mint-primary, #119c8c);
+}
+.ng-select.vs-select.ng-select-multiple .ng-value .ng-value-icon:hover {
+  background: rgba(17, 156, 140, 0.2);
+}

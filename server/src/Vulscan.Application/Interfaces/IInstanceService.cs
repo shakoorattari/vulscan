@@ -20,7 +20,7 @@ public interface IInstanceService
     /// <summary>
     /// Get instance by ID.
     /// </summary>
-    Task<InstanceDto?> GetByIdAsync(int id);
+    Task<InstanceDto?> GetByIdAsync(Guid id);
 
     /// <summary>
     /// Create a new Azure DevOps instance from a project URL.
@@ -30,15 +30,15 @@ public interface IInstanceService
     /// <summary>
     /// Update an existing instance.
     /// </summary>
-    Task<InstanceDto?> UpdateAsync(int id, UpdateInstanceRequest request);
+    Task<InstanceDto?> UpdateAsync(Guid id, UpdateInstanceRequest request);
 
     /// <summary>
     /// Delete an instance.
     /// </summary>
-    Task<bool> DeleteAsync(int id);
+    Task<bool> DeleteAsync(Guid id);
 
     /// <summary>
     /// Test connection to an instance.
     /// </summary>
-    Task<(bool Success, string Message)> TestConnectionAsync(int id);
+    Task<(bool Success, string Message)> TestConnectionAsync(Guid id);
 }

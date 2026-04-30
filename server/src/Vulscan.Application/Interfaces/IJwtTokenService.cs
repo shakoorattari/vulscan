@@ -5,7 +5,7 @@ namespace Vulscan.Application.Interfaces;
 /// </summary>
 public interface IJwtTokenService
 {
-    string GenerateAccessToken(int userId, string username, string role);
+    string GenerateAccessToken(string userId, string username, string role);
     string GenerateRefreshToken();
-    (int userId, string username, string role)? ValidateToken(string token);
+    (string userId, string username, string role)? ValidateToken(string token);
 }

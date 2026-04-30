@@ -25,10 +25,10 @@ public sealed class VulnerabilitiesController(IVulnerabilityService vulnerabilit
     /// <summary>
     /// Get a single vulnerability by ID.
     /// </summary>
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<VulnerabilityDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id, CancellationToken ct)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var result = await vulnerabilityService.GetByIdAsync(id, ct);
         if (result is null) return NotFound(ApiResponse.Fail("Vulnerability not found."));
@@ -38,12 +38,12 @@ public sealed class VulnerabilitiesController(IVulnerabilityService vulnerabilit
     /// <summary>
     /// Update the status of a vulnerability (acknowledge, resolve, suppress).
     /// </summary>
-    [HttpPatch("{id:int}/status")]
+    [HttpPatch("{id:guid}/status")]
     [Authorize(Roles = "Admin,SecurityAnalyst")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStatus(
-        int id,
+        Guid id,
         [FromBody] UpdateVulnerabilityStatusDto dto,
         CancellationToken ct)
     {

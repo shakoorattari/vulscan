@@ -9,6 +9,7 @@ import {
     ExecutiveSummaryReport,
     InstanceDto,
     InstanceSummary,
+    PackageInventory,
     PagedResult,
     ProjectDetailReport,
     ProjectSummary,
@@ -38,12 +39,19 @@ export class ApiService {
     return this.http.post<ApiResponse<TriggerScanResponse>>(`${this.baseUrl}/scans/trigger`, request);
   }
 
-  getScanHistory(page = 1, pageSize = 25): Observable<ApiResponse<PagedResult<ScanRun>>> {
-    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+  getScanHistory(
+    page = 1,
+    pageSize = 25,
+    instanceId?: string,
+  ): Observable<ApiResponse<PagedResult<ScanRun>>> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (instanceId !== undefined && instanceId !== null) {
+      params = params.set('instanceId', instanceId);
+    }
     return this.http.get<ApiResponse<PagedResult<ScanRun>>>(`${this.baseUrl}/scans`, { params });
   }
 
-  getScanById(id: number): Observable<ApiResponse<ScanRun>> {
+  getScanById(id: string): Observable<ApiResponse<ScanRun>> {
     return this.http.get<ApiResponse<ScanRun>>(`${this.baseUrl}/scans/${id}`);
   }
 
@@ -62,11 +70,11 @@ export class ApiService {
     });
   }
 
-  getVulnerabilityById(id: number): Observable<ApiResponse<Vulnerability>> {
+  getVulnerabilityById(id: string): Observable<ApiResponse<Vulnerability>> {
     return this.http.get<ApiResponse<Vulnerability>>(`${this.baseUrl}/vulnerabilities/${id}`);
   }
 
-  updateVulnerabilityStatus(id: number, status: string): Observable<ApiResponse<void>> {
+  updateVulnerabilityStatus(id: string, status: string): Observable<ApiResponse<void>> {
     return this.http.patch<ApiResponse<void>>(`${this.baseUrl}/vulnerabilities/${id}/status`, { status });
   }
 
@@ -84,7 +92,7 @@ export class ApiService {
     return this.http.get<ApiResponse<InstanceSummary[]>>(`${this.baseUrl}/instances/summaries`);
   }
 
-  getInstanceById(id: number): Observable<ApiResponse<InstanceDto>> {
+  getInstanceById(id: string): Observable<ApiResponse<InstanceDto>> {
     return this.http.get<ApiResponse<InstanceDto>>(`${this.baseUrl}/instances/${id}`);
   }
 
@@ -92,45 +100,45 @@ export class ApiService {
     return this.http.post<ApiResponse<InstanceDto>>(`${this.baseUrl}/instances`, request);
   }
 
-  updateInstance(id: number, request: UpdateInstanceRequest): Observable<ApiResponse<InstanceDto>> {
+  updateInstance(id: string, request: UpdateInstanceRequest): Observable<ApiResponse<InstanceDto>> {
     return this.http.put<ApiResponse<InstanceDto>>(`${this.baseUrl}/instances/${id}`, request);
   }
 
-  deleteInstance(id: number): Observable<ApiResponse<void>> {
+  deleteInstance(id: string): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/instances/${id}`);
   }
 
-  testInstanceConnection(id: number): Observable<ApiResponse<void>> {
+  testInstanceConnection(id: string): Observable<ApiResponse<void>> {
     return this.http.post<ApiResponse<void>>(`${this.baseUrl}/instances/${id}/test`, {});
   }
 
   // ── Reports ────────────────────────────────────────────────────────
-  getExecutiveSummary(scanRunId?: number): Observable<ApiResponse<ExecutiveSummaryReport>> {
+  getExecutiveSummary(scanRunId?: string): Observable<ApiResponse<ExecutiveSummaryReport>> {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get<ApiResponse<ExecutiveSummaryReport>>(`${this.baseUrl}/reports/executive-summary`, { params });
   }
 
-  getProjectSummaries(scanRunId?: number): Observable<ApiResponse<ProjectSummary[]>> {
+  getProjectSummaries(scanRunId?: string): Observable<ApiResponse<ProjectSummary[]>> {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get<ApiResponse<ProjectSummary[]>>(`${this.baseUrl}/reports/projects`, { params });
   }
 
-  getProjectReport(projectId: number, scanRunId?: number): Observable<ApiResponse<ProjectDetailReport>> {
+  getProjectReport(projectId: string, scanRunId?: string): Observable<ApiResponse<ProjectDetailReport>> {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get<ApiResponse<ProjectDetailReport>>(`${this.baseUrl}/reports/projects/${projectId}`, { params });
   }
 
-  getVulnerabilitySummaries(severity?: string, scanRunId?: number): Observable<ApiResponse<VulnerabilitySummaryItem[]>> {
+  getVulnerabilitySummaries(severity?: string, scanRunId?: string): Observable<ApiResponse<VulnerabilitySummaryItem[]>> {
     let params = new HttpParams();
     if (severity) params = params.set('severity', severity);
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get<ApiResponse<VulnerabilitySummaryItem[]>>(`${this.baseUrl}/reports/vulnerabilities`, { params });
   }
 
-  getVulnerabilityReport(cveId: string, scanRunId?: number): Observable<ApiResponse<VulnerabilityDetailReport>> {
+  getVulnerabilityReport(cveId: string, scanRunId?: string): Observable<ApiResponse<VulnerabilityDetailReport>> {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get<ApiResponse<VulnerabilityDetailReport>>(`${this.baseUrl}/reports/vulnerabilities/${encodeURIComponent(cveId)}`, { params });
@@ -141,7 +149,7 @@ export class ApiService {
     return this.http.get<ApiResponse<SeverityTrend[]>>(`${this.baseUrl}/reports/trends`, { params });
   }
 
-  exportProjectCsv(projectId: number, scanRunId?: number): Observable<Blob> {
+  exportProjectCsv(projectId: string, scanRunId?: string): Observable<Blob> {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get(`${this.baseUrl}/reports/projects/${projectId}/export/csv`, {
@@ -149,7 +157,7 @@ export class ApiService {
     });
   }
 
-  exportProjectVulnerabilitiesCsv(projectId: number, scanRunId?: number): Observable<Blob> {
+  exportProjectVulnerabilitiesCsv(projectId: string, scanRunId?: string): Observable<Blob> {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get(`${this.baseUrl}/reports/projects/${projectId}/export/vulnerabilities-csv`, {
@@ -157,12 +165,37 @@ export class ApiService {
     });
   }
 
-  exportVulnerabilitiesCsv(severity?: string, scanRunId?: number): Observable<Blob> {
+  exportVulnerabilitiesCsv(severity?: string, scanRunId?: string): Observable<Blob> {
     let params = new HttpParams();
     if (severity) params = params.set('severity', severity);
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get(`${this.baseUrl}/reports/vulnerabilities/export/csv`, {
       params, responseType: 'blob',
     });
+  }
+
+  // ── Packages ───────────────────────────────────────────────────────
+  getPackageInventory(filters: {
+    scanRunId?: string;
+    repositoryId?: string;
+    projectId?: string;
+    ecosystem?: string;
+    hasVulnerabilities?: boolean;
+  } = {}): Observable<ApiResponse<PackageInventory>> {
+    let params = new HttpParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') {
+        params = params.set(k, String(v));
+      }
+    });
+    return this.http.get<ApiResponse<PackageInventory>>(`${this.baseUrl}/packages/inventory`, { params });
+  }
+
+  exportPackagesCsv(scanRunId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/packages/scan/${scanRunId}/csv`, { responseType: 'blob' });
+  }
+
+  downloadSbom(scanRunId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/packages/scan/${scanRunId}/sbom/download`, { responseType: 'blob' });
   }
 }

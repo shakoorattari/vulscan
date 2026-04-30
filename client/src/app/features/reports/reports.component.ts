@@ -635,7 +635,7 @@ export class ReportsComponent implements OnInit {
     }
   }
 
-  openProjectDetail(projectId: number): void {
+  openProjectDetail(projectId: string): void {
     this.router.navigate(['/reports/projects', projectId]);
   }
 
@@ -643,7 +643,7 @@ export class ReportsComponent implements OnInit {
     this.router.navigate(['/reports/vulnerabilities', cveId]);
   }
 
-  exportProjectCsv(projectId: number, projectName: string): void {
+  exportProjectCsv(projectId: string, projectName: string): void {
     this.apiService.exportProjectVulnerabilitiesCsv(projectId).subscribe(blob => {
       this.downloadBlob(blob, `${projectName}-vulnerabilities.csv`);
     });

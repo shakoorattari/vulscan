@@ -28,7 +28,7 @@ public sealed class ScanProcessor(
         "composer.json", "Gemfile"
     ];
 
-    public async Task ProcessScanAsync(int scanRunId, CancellationToken ct = default)
+    public async Task ProcessScanAsync(Guid scanRunId, CancellationToken ct = default)
     {
         var stopwatch = Stopwatch.StartNew();
 

@@ -9,13 +9,13 @@ namespace Vulscan.Infrastructure.Services;
 /// </summary>
 public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICurrentUserService
 {
-    public int? UserId
+    public Guid? UserId
     {
         get
         {
             var sub = httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-            return int.TryParse(sub, out var id) ? id : null;
+            return Guid.TryParse(sub, out var id) ? id : null;
         }
     }
 

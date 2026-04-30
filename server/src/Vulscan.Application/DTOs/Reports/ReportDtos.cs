@@ -38,7 +38,7 @@ public sealed record EcosystemBreakdownDto
 /// </summary>
 public sealed record ProjectSummaryDto
 {
-    public int ProjectId { get; init; }
+    public Guid ProjectId { get; init; }
     public string ProjectName { get; init; } = string.Empty;
     public int RepositoryCount { get; init; }
     public int TotalPackages { get; init; }
@@ -54,7 +54,7 @@ public sealed record ProjectSummaryDto
 /// </summary>
 public sealed record ProjectDetailReportDto
 {
-    public int ProjectId { get; init; }
+    public Guid ProjectId { get; init; }
     public string ProjectName { get; init; } = string.Empty;
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
     public int TotalRepositories { get; init; }
@@ -73,7 +73,7 @@ public sealed record ProjectDetailReportDto
 /// </summary>
 public sealed record RepositoryReportDto
 {
-    public int RepositoryId { get; init; }
+    public Guid RepositoryId { get; init; }
     public string RepositoryName { get; init; } = string.Empty;
     public int TotalPackages { get; init; }
     public int VulnerablePackages { get; init; }
@@ -86,7 +86,7 @@ public sealed record RepositoryReportDto
 /// </summary>
 public sealed record ReportVulnerabilityDto
 {
-    public int Id { get; init; }
+    public Guid Id { get; init; }
     public string CveId { get; init; } = string.Empty;
     public string PackageName { get; init; } = string.Empty;
     public string InstalledVersion { get; init; } = string.Empty;
@@ -133,7 +133,7 @@ public sealed record VulnerabilityDetailReportDto
 /// </summary>
 public sealed record AffectedRepositoryDto
 {
-    public int RepositoryId { get; init; }
+    public Guid RepositoryId { get; init; }
     public string RepositoryName { get; init; } = string.Empty;
     public string ProjectName { get; init; } = string.Empty;
     public string PackageName { get; init; } = string.Empty;
@@ -164,7 +164,7 @@ public sealed record VulnerabilitySummaryDto
 public sealed record SeverityTrendDto
 {
     public DateTime ScanDate { get; init; }
-    public int ScanId { get; init; }
+    public Guid ScanId { get; init; }
     public int Critical { get; init; }
     public int High { get; init; }
     public int Medium { get; init; }

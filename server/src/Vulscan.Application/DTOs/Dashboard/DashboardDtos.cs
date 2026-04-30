@@ -18,7 +18,7 @@ public sealed record DashboardSummaryDto
 
 public sealed record RecentScanDto
 {
-    public int Id { get; init; }
+    public Guid Id { get; init; }
     public DateTime StartedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
     public string Status { get; init; } = string.Empty;
@@ -29,7 +29,7 @@ public sealed record RecentScanDto
 
 public sealed record TopVulnerableRepoDto
 {
-    public int RepositoryId { get; init; }
+    public Guid RepositoryId { get; init; }
     public string RepositoryName { get; init; } = string.Empty;
     public string ProjectName { get; init; } = string.Empty;
     public int CriticalCount { get; init; }

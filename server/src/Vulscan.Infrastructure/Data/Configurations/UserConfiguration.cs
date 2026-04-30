@@ -30,7 +30,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         // Seed default admin user (password should be changed immediately after deployment)
         builder.HasData(new User
         {
-            Id = 1,
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
             Username = "admin",
             Email = "admin@vulscan.local",
             PasswordHash = AdminPasswordHash,

@@ -11,7 +11,7 @@ export interface LoginResponse {
 }
 
 export interface UserInfo {
-  id: number;
+  id: string;
   username: string;
   email: string;
   role: string;
@@ -50,7 +50,7 @@ export interface DashboardSummary {
 }
 
 export interface RecentScan {
-  id: number;
+  id: string;
   startedAt: string;
   completedAt?: string;
   status: string;
@@ -60,7 +60,7 @@ export interface RecentScan {
 }
 
 export interface TopVulnerableRepo {
-  repositoryId: number;
+  repositoryId: string;
   repositoryName: string;
   projectName: string;
   criticalCount: number;
@@ -69,8 +69,8 @@ export interface TopVulnerableRepo {
 }
 
 export interface ScanRun {
-  id: number;
-  instanceId?: number;
+  id: string;
+  instanceId?: string;
   instanceName?: string;
   startedAt: string;
   completedAt?: string;
@@ -88,17 +88,17 @@ export interface ScanRun {
 }
 
 export interface TriggerScanRequest {
-  instanceId: number;
+  instanceId: string;
 }
 
 export interface TriggerScanResponse {
-  scanRunId: number;
+  scanRunId: string;
   status: string;
   message: string;
 }
 
 export interface Vulnerability {
-  id: number;
+  id: string;
   cveId: string;
   packageName: string;
   installedVersion: string;
@@ -132,7 +132,7 @@ export interface UpdateInstanceRequest {
 }
 
 export interface InstanceDto {
-  id: number;
+  id: string;
   name: string;
   url: string;
   collection: string;
@@ -143,10 +143,20 @@ export interface InstanceDto {
   lastScannedAt?: string;
   totalScans: number;
   totalVulnerabilities: number;
+
+  // Latest scan snapshot (null when no scans have run yet)
+  lastScanId?: string;
+  lastScanStatus?: string;
+  lastScanDurationSeconds?: number;
+  lastScanCriticalCount: number;
+  lastScanHighCount: number;
+  lastScanMediumCount: number;
+  lastScanLowCount: number;
+  lastScanTotalVulnerabilities: number;
 }
 
 export interface InstanceSummary {
-  id: number;
+  id: string;
   name: string;
   projectName: string;
   isEnabled: boolean;
@@ -180,7 +190,7 @@ export interface EcosystemBreakdown {
 }
 
 export interface ProjectSummary {
-  projectId: number;
+  projectId: string;
   projectName: string;
   repositoryCount: number;
   totalPackages: number;
@@ -192,7 +202,7 @@ export interface ProjectSummary {
 }
 
 export interface ProjectDetailReport {
-  projectId: number;
+  projectId: string;
   projectName: string;
   generatedAt: string;
   totalRepositories: number;
@@ -207,7 +217,7 @@ export interface ProjectDetailReport {
 }
 
 export interface RepositoryReport {
-  repositoryId: number;
+  repositoryId: string;
   repositoryName: string;
   totalPackages: number;
   vulnerablePackages: number;
@@ -216,7 +226,7 @@ export interface RepositoryReport {
 }
 
 export interface ReportVulnerability {
-  id: number;
+  id: string;
   cveId: string;
   packageName: string;
   installedVersion: string;
@@ -251,7 +261,7 @@ export interface VulnerabilityDetailReport {
 }
 
 export interface AffectedRepository {
-  repositoryId: number;
+  repositoryId: string;
   repositoryName: string;
   projectName: string;
   packageName: string;
@@ -274,10 +284,61 @@ export interface VulnerabilitySummaryItem {
 
 export interface SeverityTrend {
   scanDate: string;
-  scanId: number;
+  scanId: string;
   critical: number;
   high: number;
   medium: number;
   low: number;
   total: number;
+}
+
+// ── Packages ─────────────────────────────────────────────────────────
+export interface PackageVulnerability {
+  cveId: string;
+  severity: string;
+  cvssScore?: number;
+  fixedVersion?: string;
+}
+
+export interface PackageItem {
+  id: string;
+  scanRunId: string;
+  repositoryId: string;
+  projectId: string;
+  projectName: string;
+  repositoryName: string;
+  ecosystem: string;
+  name: string;
+  version: string;
+  sourceFile: string;
+  isDirect: boolean;
+  hasVulnerabilities: boolean;
+  license?: string | null;
+  purl?: string | null;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  totalVulnerabilities: number;
+  vulnerabilities: PackageVulnerability[];
+}
+
+export interface EcosystemGroupSummary {
+  ecosystem: string;
+  totalPackages: number;
+  vulnerablePackages: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+}
+
+export interface PackageInventory {
+  scanRunId: string | null;
+  repositoryId: string | null;
+  projectId: string | null;
+  totalPackages: number;
+  vulnerablePackages: number;
+  ecosystems: EcosystemGroupSummary[];
+  packages: PackageItem[];
 }

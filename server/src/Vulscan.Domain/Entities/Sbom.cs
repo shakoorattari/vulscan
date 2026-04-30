@@ -7,8 +7,8 @@ namespace Vulscan.Domain.Entities;
 /// </summary>
 public class Sbom : BaseEntity
 {
-    public int RepositoryId { get; set; }
-    public int ScanRunId { get; set; }
+    public Guid RepositoryId { get; set; }
+    public Guid ScanRunId { get; set; }
     public string Format { get; set; } = "CycloneDX";
     public string Generator { get; set; } = "Syft";
     public int ComponentCount { get; set; }

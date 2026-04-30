@@ -31,8 +31,8 @@ public interface IDependencyScanner
         string fileName,
         string filePath,
         string content,
-        int scanRunId,
-        int repositoryId,
-        int? sbomId = null,
+        Guid scanRunId,
+        Guid repositoryId,
+        Guid? sbomId = null,
         CancellationToken ct = default);
 }

@@ -8,8 +8,8 @@ namespace Vulscan.Domain.Entities;
 /// </summary>
 public class ScanRun : BaseEntity
 {
-    public int? InstanceId { get; set; }
-    public int? TriggeredByUserId { get; set; }
+    public Guid? InstanceId { get; set; }
+    public Guid? TriggeredByUserId { get; set; }
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
     public int DurationSeconds { get; set; }

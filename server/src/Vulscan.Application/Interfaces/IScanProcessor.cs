@@ -8,5 +8,5 @@ public interface IScanProcessor
     /// <summary>
     /// Processes a queued scan run - fetches repos, scans dependencies, detects vulnerabilities.
     /// </summary>
-    Task ProcessScanAsync(int scanRunId, CancellationToken ct = default);
+    Task ProcessScanAsync(Guid scanRunId, CancellationToken ct = default);
 }

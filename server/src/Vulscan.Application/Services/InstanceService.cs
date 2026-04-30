@@ -38,7 +38,7 @@ public partial class InstanceService(DbContext dbContext) : IInstanceService
         }).ToList();
     }
 
-    public async Task<InstanceDto?> GetByIdAsync(int id)
+    public async Task<InstanceDto?> GetByIdAsync(Guid id)
     {
         var instance = await dbContext.Set<AzureDevOpsInstance>()
             .Include(i => i.Projects)
@@ -96,7 +96,7 @@ public partial class InstanceService(DbContext dbContext) : IInstanceService
         return MapToDto(instance);
     }
 
-    public async Task<InstanceDto?> UpdateAsync(int id, UpdateInstanceRequest request)
+    public async Task<InstanceDto?> UpdateAsync(Guid id, UpdateInstanceRequest request)
     {
         var instance = await dbContext.Set<AzureDevOpsInstance>()
             .Include(i => i.Projects)
@@ -125,7 +125,7 @@ public partial class InstanceService(DbContext dbContext) : IInstanceService
         return MapToDto(instance);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
         var instance = await dbContext.Set<AzureDevOpsInstance>()
             .FirstOrDefaultAsync(i => i.Id == id);
@@ -137,7 +137,7 @@ public partial class InstanceService(DbContext dbContext) : IInstanceService
         return true;
     }
 
-    public async Task<(bool Success, string Message)> TestConnectionAsync(int id)
+    public async Task<(bool Success, string Message)> TestConnectionAsync(Guid id)
     {
         var instance = await dbContext.Set<AzureDevOpsInstance>()
             .Include(i => i.Projects)
@@ -209,7 +209,7 @@ public partial class InstanceService(DbContext dbContext) : IInstanceService
     private static InstanceDto MapToDto(AzureDevOpsInstance instance)
     {
         var lastScan = instance.ScanRuns?.MaxBy(s => s.StartedAt);
-        var totalVulns = instance.ScanRuns?.Sum(s => s.Vulnerabilities?.Count ?? 0) ?? 0;
+        var totalVulns = instance.ScanRuns?.Sum(s => s.TotalVulnerabilities) ?? 0;
 
         return new InstanceDto
         {
@@ -223,7 +223,15 @@ public partial class InstanceService(DbContext dbContext) : IInstanceService
             CreatedAt = instance.CreatedAt,
             LastScannedAt = lastScan?.StartedAt,
             TotalScans = instance.ScanRuns?.Count ?? 0,
-            TotalVulnerabilities = totalVulns
+            TotalVulnerabilities = totalVulns,
+            LastScanId = lastScan?.Id,
+            LastScanStatus = lastScan?.Status.ToString(),
+            LastScanDurationSeconds = lastScan?.DurationSeconds,
+            LastScanCriticalCount = lastScan?.CriticalCount ?? 0,
+            LastScanHighCount = lastScan?.HighCount ?? 0,
+            LastScanMediumCount = lastScan?.MediumCount ?? 0,
+            LastScanLowCount = lastScan?.LowCount ?? 0,
+            LastScanTotalVulnerabilities = lastScan?.TotalVulnerabilities ?? 0
         };
     }
 }

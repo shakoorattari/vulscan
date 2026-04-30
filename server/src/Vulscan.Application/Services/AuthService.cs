@@ -22,7 +22,7 @@ public sealed class AuthService(
         user.LastLoginAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(ct);
 
-        var accessToken = jwtTokenService.GenerateAccessToken(user.Id, user.Username, user.Role.ToString());
+        var accessToken = jwtTokenService.GenerateAccessToken(user.Id.ToString(), user.Username, user.Role.ToString());
         var refreshToken = jwtTokenService.GenerateRefreshToken();
 
         return new LoginResponse

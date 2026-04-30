@@ -9,9 +9,9 @@ namespace Vulscan.Domain.Entities;
 /// </summary>
 public class DiscoveredPackage : BaseEntity
 {
-    public int ScanRunId { get; set; }
-    public int RepositoryId { get; set; }
-    public int? SbomId { get; set; }
+    public Guid ScanRunId { get; set; }
+    public Guid RepositoryId { get; set; }
+    public Guid? SbomId { get; set; }
 
     /// <summary>Package ecosystem (npm, nuget, pypi, maven, etc.)</summary>
     public string Ecosystem { get; set; } = string.Empty;

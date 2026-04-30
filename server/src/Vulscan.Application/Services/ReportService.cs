@@ -13,23 +13,23 @@ namespace Vulscan.Application.Services;
 public sealed class ReportService(DbContext db, ILogger<ReportService> logger) : IReportService
 {
     public async Task<ExecutiveSummaryReportDto> GetExecutiveSummaryAsync(
-        int? scanRunId = null, CancellationToken ct = default)
+        Guid? scanRunId = null, CancellationToken ct = default)
     {
-        logger.LogInformation("Generating executive summary report (ScanRunId: {ScanRunId})", scanRunId ?? -1);
+        logger.LogInformation("Generating executive summary report (ScanRunId: {ScanRunId})", scanRunId?.ToString() ?? "latest");
 
         // Determine the latest scan if no specific one requested
-        int effectiveScanId;
+        Guid effectiveScanId;
         if (scanRunId.HasValue)
         {
             effectiveScanId = scanRunId.Value;
         }
         else
         {
-            effectiveScanId = await db.Set<ScanRun>()
+            var latestScan = await db.Set<ScanRun>()
                 .Where(s => s.Status == ScanStatus.Completed)
                 .OrderByDescending(s => s.CompletedAt)
-                .Select(s => s.Id)
                 .FirstOrDefaultAsync(ct);
+            effectiveScanId = latestScan?.Id ?? Guid.Empty;
         }
 
         var scanRun = await db.Set<ScanRun>().FirstOrDefaultAsync(s => s.Id == effectiveScanId, ct);
@@ -40,13 +40,13 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
         var totalScans = await db.Set<ScanRun>().CountAsync(s => s.Status == ScanStatus.Completed, ct);
 
         // Packages for the scan
-        var packagesQuery = effectiveScanId > 0
+        var packagesQuery = effectiveScanId != Guid.Empty
             ? db.Set<DiscoveredPackage>().Where(p => p.ScanRunId == effectiveScanId)
             : db.Set<DiscoveredPackage>();
         var totalPackages = await packagesQuery.CountAsync(ct);
 
         // Vulnerabilities for the scan
-        var vulnsQuery = effectiveScanId > 0
+        var vulnsQuery = effectiveScanId != Guid.Empty
             ? db.Set<Vulnerability>().Where(v => v.ScanRunId == effectiveScanId)
             : db.Set<Vulnerability>();
 
@@ -93,23 +93,23 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
     }
 
     public async Task<List<ProjectSummaryDto>> GetProjectSummariesAsync(
-        int? scanRunId = null, CancellationToken ct = default)
+        Guid? scanRunId = null, CancellationToken ct = default)
     {
-        logger.LogInformation("Generating project summaries (ScanRunId: {ScanRunId})", scanRunId ?? -1);
+        logger.LogInformation("Generating project summaries (ScanRunId: {ScanRunId})", scanRunId?.ToString() ?? "latest");
 
         // Get latest scan if not specified
-        int effectiveScanId;
+        Guid effectiveScanId;
         if (scanRunId.HasValue)
         {
             effectiveScanId = scanRunId.Value;
         }
         else
         {
-            effectiveScanId = await db.Set<ScanRun>()
+            var latestScan = await db.Set<ScanRun>()
                 .Where(s => s.Status == ScanStatus.Completed)
                 .OrderByDescending(s => s.CompletedAt)
-                .Select(s => s.Id)
                 .FirstOrDefaultAsync(ct);
+            effectiveScanId = latestScan?.Id ?? Guid.Empty;
         }
 
         var projects = await db.Set<Project>()
@@ -122,11 +122,11 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
         {
             var repoIds = project.Repositories.Select(r => r.Id).ToList();
 
-            var packagesQuery = effectiveScanId > 0
+            var packagesQuery = effectiveScanId != Guid.Empty
                 ? db.Set<DiscoveredPackage>().Where(p => repoIds.Contains(p.RepositoryId) && p.ScanRunId == effectiveScanId)
                 : db.Set<DiscoveredPackage>().Where(p => repoIds.Contains(p.RepositoryId));
 
-            var vulnsQuery = effectiveScanId > 0
+            var vulnsQuery = effectiveScanId != Guid.Empty
                 ? db.Set<Vulnerability>().Where(v => repoIds.Contains(v.RepositoryId) && v.ScanRunId == effectiveScanId)
                 : db.Set<Vulnerability>().Where(v => repoIds.Contains(v.RepositoryId));
 
@@ -156,7 +156,7 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
     }
 
     public async Task<ProjectDetailReportDto?> GetProjectReportAsync(
-        int projectId, int? scanRunId = null, CancellationToken ct = default)
+        Guid projectId, Guid? scanRunId = null, CancellationToken ct = default)
     {
         logger.LogInformation("Generating project report for ProjectId: {ProjectId}", projectId);
 
@@ -168,27 +168,27 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
             return null;
 
         // Get latest scan if not specified
-        int effectiveScanId;
+        Guid effectiveScanId;
         if (scanRunId.HasValue)
         {
             effectiveScanId = scanRunId.Value;
         }
         else
         {
-            effectiveScanId = await db.Set<ScanRun>()
+            var latestScan = await db.Set<ScanRun>()
                 .Where(s => s.Status == ScanStatus.Completed)
                 .OrderByDescending(s => s.CompletedAt)
-                .Select(s => s.Id)
                 .FirstOrDefaultAsync(ct);
+            effectiveScanId = latestScan?.Id ?? Guid.Empty;
         }
 
         var repoIds = project.Repositories.Select(r => r.Id).ToList();
 
-        var packagesQuery = effectiveScanId > 0
+        var packagesQuery = effectiveScanId != Guid.Empty
             ? db.Set<DiscoveredPackage>().Where(p => repoIds.Contains(p.RepositoryId) && p.ScanRunId == effectiveScanId)
             : db.Set<DiscoveredPackage>().Where(p => repoIds.Contains(p.RepositoryId));
 
-        var vulnsQuery = effectiveScanId > 0
+        var vulnsQuery = effectiveScanId != Guid.Empty
             ? db.Set<Vulnerability>().Where(v => repoIds.Contains(v.RepositoryId) && v.ScanRunId == effectiveScanId)
             : db.Set<Vulnerability>().Where(v => repoIds.Contains(v.RepositoryId));
 
@@ -268,27 +268,27 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
     }
 
     public async Task<List<VulnerabilitySummaryDto>> GetVulnerabilitySummariesAsync(
-        string? severity = null, int? scanRunId = null, CancellationToken ct = default)
+        string? severity = null, Guid? scanRunId = null, CancellationToken ct = default)
     {
         logger.LogInformation("Generating vulnerability summaries (Severity: {Severity}, ScanRunId: {ScanRunId})",
-            severity ?? "all", scanRunId ?? -1);
+            severity ?? "all", scanRunId?.ToString() ?? "latest");
 
         // Get latest scan if not specified
-        int effectiveScanId;
+        Guid effectiveScanId;
         if (scanRunId.HasValue)
         {
             effectiveScanId = scanRunId.Value;
         }
         else
         {
-            effectiveScanId = await db.Set<ScanRun>()
+            var latestScan = await db.Set<ScanRun>()
                 .Where(s => s.Status == ScanStatus.Completed)
                 .OrderByDescending(s => s.CompletedAt)
-                .Select(s => s.Id)
                 .FirstOrDefaultAsync(ct);
+            effectiveScanId = latestScan?.Id ?? Guid.Empty;
         }
 
-        var vulnsQuery = effectiveScanId > 0
+        var vulnsQuery = effectiveScanId != Guid.Empty
             ? db.Set<Vulnerability>().Where(v => v.ScanRunId == effectiveScanId)
             : db.Set<Vulnerability>().AsQueryable();
 
@@ -326,26 +326,26 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
     }
 
     public async Task<VulnerabilityDetailReportDto?> GetVulnerabilityReportAsync(
-        string cveId, int? scanRunId = null, CancellationToken ct = default)
+        string cveId, Guid? scanRunId = null, CancellationToken ct = default)
     {
         logger.LogInformation("Generating vulnerability detail report for CVE: {CveId}", cveId);
 
         // Get latest scan if not specified
-        int effectiveScanId;
+        Guid effectiveScanId;
         if (scanRunId.HasValue)
         {
             effectiveScanId = scanRunId.Value;
         }
         else
         {
-            effectiveScanId = await db.Set<ScanRun>()
+            var latestScan = await db.Set<ScanRun>()
                 .Where(s => s.Status == ScanStatus.Completed)
                 .OrderByDescending(s => s.CompletedAt)
-                .Select(s => s.Id)
                 .FirstOrDefaultAsync(ct);
+            effectiveScanId = latestScan?.Id ?? Guid.Empty;
         }
 
-        var vulnsQuery = effectiveScanId > 0
+        var vulnsQuery = effectiveScanId != Guid.Empty
             ? db.Set<Vulnerability>().Where(v => v.CveId == cveId && v.ScanRunId == effectiveScanId)
             : db.Set<Vulnerability>().Where(v => v.CveId == cveId);
 

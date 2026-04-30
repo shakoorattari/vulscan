@@ -5,7 +5,7 @@
             "name": ".NET Core API",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build-api",
+            "preLaunchTask": "clean-build-api",
             "program": "${workspaceFolder}/server/src/Vulscan.Api/bin/Debug/net10.0/Vulscan.Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/server/src/Vulscan.Api",

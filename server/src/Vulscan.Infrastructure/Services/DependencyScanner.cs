@@ -21,7 +21,7 @@ public sealed partial class DependencyScanner(
 
     public async Task<ScanResult> ScanDependenciesAsync(
         string fileName, string filePath, string content,
-        int scanRunId, int repositoryId, int? sbomId = null, CancellationToken ct = default)
+        Guid scanRunId, Guid repositoryId, Guid? sbomId = null, CancellationToken ct = default)
     {
         var packages = new List<DiscoveredPackage>();
         var vulnerabilities = new List<Vulnerability>();
@@ -585,7 +585,7 @@ public sealed partial class DependencyScanner(
 
     private static Vulnerability MapToVulnerability(
         OsvVulnerability vuln, DependencyInfo dep,
-        int scanRunId, int repositoryId, int? sbomId)
+        Guid scanRunId, Guid repositoryId, Guid? sbomId)
     {
         var cveId = vuln.Aliases.FirstOrDefault(a => a.StartsWith("CVE-", StringComparison.OrdinalIgnoreCase))
                     ?? vuln.Id;

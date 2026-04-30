@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Vulscan.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialGuidSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,8 +19,7 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Url = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Collection = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
@@ -40,8 +39,7 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
@@ -61,9 +59,8 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    InstanceId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InstanceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     AzureProjectId = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     DiscoveredAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -87,12 +84,11 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<int>(type: "int", nullable: true),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Action = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     EntityType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    EntityId = table.Column<int>(type: "int", nullable: true),
+                    EntityId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Details = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IpAddress = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -116,10 +112,9 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    InstanceId = table.Column<int>(type: "int", nullable: true),
-                    TriggeredByUserId = table.Column<int>(type: "int", nullable: true),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InstanceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    TriggeredByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DurationSeconds = table.Column<int>(type: "int", nullable: false),
@@ -159,9 +154,8 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ProjectId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     CloneUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     DefaultBranch = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, defaultValue: "main"),
@@ -188,10 +182,9 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RepositoryId = table.Column<int>(type: "int", nullable: false),
-                    ScanRunId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepositoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ScanRunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Format = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Generator = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     ComponentCount = table.Column<int>(type: "int", nullable: false),
@@ -226,11 +219,10 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ScanRunId = table.Column<int>(type: "int", nullable: false),
-                    RepositoryId = table.Column<int>(type: "int", nullable: false),
-                    SbomId = table.Column<int>(type: "int", nullable: true),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ScanRunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepositoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SbomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Ecosystem = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Version = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -272,11 +264,10 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    SbomId = table.Column<int>(type: "int", nullable: true),
-                    ScanRunId = table.Column<int>(type: "int", nullable: false),
-                    RepositoryId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SbomId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ScanRunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepositoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CveId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PackageName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     InstalledVersion = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -319,7 +310,7 @@ namespace Vulscan.Infrastructure.Migrations
                 schema: "vulscan",
                 table: "Users",
                 columns: new[] { "Id", "CreatedAt", "Email", "IsActive", "LastLoginAt", "PasswordHash", "Role", "UpdatedAt", "Username" },
-                values: new object[] { 1, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "admin@vulscan.local", true, null, "$2a$12$OOF3yNNPWG8p2JnOjF4V5u83Oc..5jM7H5vvgNd7cJc5PQG.DLhVW", "Admin", null, "admin" });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "admin@vulscan.local", true, null, "$2a$12$6iQL3yNjcPI40mMYzoinqOMnbCf6sIwyu2iQczG7DCK19bEAezyp.", "Admin", null, "admin" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_Timestamp",

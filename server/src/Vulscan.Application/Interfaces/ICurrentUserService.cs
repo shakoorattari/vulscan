@@ -5,7 +5,7 @@ namespace Vulscan.Application.Interfaces;
 /// </summary>
 public interface ICurrentUserService
 {
-    int? UserId { get; }
+    Guid? UserId { get; }
     string? Username { get; }
     string? Role { get; }
     bool IsAuthenticated { get; }

@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProjectDetailReport } from '../../core/models/api.models';
 import { ApiService } from '../../core/services/api.service';
 
@@ -18,6 +18,7 @@ import { ApiService } from '../../core/services/api.service';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -39,6 +40,15 @@ import { ApiService } from '../../core/services/api.service';
           <span class="current-page">{{ report()?.projectName ?? 'Project Detail' }}</span>
         </div>
         <div class="header-actions">
+          <button
+            mat-stroked-button
+            color="primary"
+            [routerLink]="['/packages']"
+            [queryParams]="{ projectId: projectId }"
+            matTooltip="View all packages discovered in this project"
+          >
+            <mat-icon>inventory_2</mat-icon> View Packages
+          </button>
           <button mat-stroked-button (click)="exportPackagesCsv()">
             <mat-icon>download</mat-icon> Packages CSV
           </button>
@@ -332,7 +342,7 @@ export class ProjectDetailComponent implements OnInit {
     'fixedVersion', 'cvssScore', 'ageDays', 'status',
   ];
 
-  private projectId = 0;
+  projectId = '';
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -341,7 +351,7 @@ export class ProjectDetailComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.projectId = Number(this.route.snapshot.paramMap.get('projectId'));
+    this.projectId = this.route.snapshot.paramMap.get('projectId') ?? '';
     this.loadReport();
   }
 

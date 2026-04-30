@@ -48,7 +48,7 @@ public record UpdateInstanceRequest
 /// </summary>
 public record InstanceDto
 {
-    public int Id { get; init; }
+    public Guid Id { get; init; }
     public required string Name { get; init; }
     public required string Url { get; init; }
     public required string Collection { get; init; }
@@ -59,6 +59,16 @@ public record InstanceDto
     public DateTime? LastScannedAt { get; init; }
     public int TotalScans { get; init; }
     public int TotalVulnerabilities { get; init; }
+
+    // Latest scan snapshot (null when no scans have run yet)
+    public Guid? LastScanId { get; init; }
+    public string? LastScanStatus { get; init; }
+    public int? LastScanDurationSeconds { get; init; }
+    public int LastScanCriticalCount { get; init; }
+    public int LastScanHighCount { get; init; }
+    public int LastScanMediumCount { get; init; }
+    public int LastScanLowCount { get; init; }
+    public int LastScanTotalVulnerabilities { get; init; }
 }
 
 /// <summary>
@@ -66,7 +76,7 @@ public record InstanceDto
 /// </summary>
 public record InstanceSummaryDto
 {
-    public int Id { get; init; }
+    public Guid Id { get; init; }
     public required string Name { get; init; }
     public required string ProjectName { get; init; }
     public bool IsEnabled { get; init; }

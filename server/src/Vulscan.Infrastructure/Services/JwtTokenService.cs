@@ -28,14 +28,14 @@ public sealed class JwtTokenService : IJwtTokenService
         _expirationHours = int.TryParse(jwtSection["ExpirationHours"], out var hours) ? hours : 8;
     }
 
-    public string GenerateAccessToken(int userId, string username, string role)
+    public string GenerateAccessToken(string userId, string username, string role)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new Claim(JwtRegisteredClaimNames.Sub, userId),
             new Claim(JwtRegisteredClaimNames.UniqueName, username),
             new Claim(ClaimTypes.Role, role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
@@ -61,7 +61,7 @@ public sealed class JwtTokenService : IJwtTokenService
         return Convert.ToBase64String(randomBytes);
     }
 
-    public (int userId, string username, string role)? ValidateToken(string token)
+    public (string userId, string username, string role)? ValidateToken(string token)
     {
         try
         {
@@ -80,8 +80,8 @@ public sealed class JwtTokenService : IJwtTokenService
                 ClockSkew = TimeSpan.FromMinutes(1)
             }, out _);
 
-            var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "0");
+            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? "0";
             var username = principal.FindFirstValue(ClaimTypes.Name)
                 ?? principal.FindFirstValue(JwtRegisteredClaimNames.UniqueName) ?? "";
             var role = principal.FindFirstValue(ClaimTypes.Role) ?? "Viewer";

@@ -25,7 +25,7 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     /// </summary>
     [HttpGet("executive-summary")]
     [ProducesResponseType(typeof(ApiResponse<ExecutiveSummaryReportDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetExecutiveSummary([FromQuery] int? scanRunId, CancellationToken ct)
+    public async Task<IActionResult> GetExecutiveSummary([FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var report = await reportService.GetExecutiveSummaryAsync(scanRunId, ct);
         return Ok(ApiResponse<ExecutiveSummaryReportDto>.Ok(report));
@@ -38,7 +38,7 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     /// </summary>
     [HttpGet("projects")]
     [ProducesResponseType(typeof(ApiResponse<List<ProjectSummaryDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetProjectSummaries([FromQuery] int? scanRunId, CancellationToken ct)
+    public async Task<IActionResult> GetProjectSummaries([FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var summaries = await reportService.GetProjectSummariesAsync(scanRunId, ct);
         return Ok(ApiResponse<List<ProjectSummaryDto>>.Ok(summaries));
@@ -48,10 +48,10 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     /// Get detailed report for a specific project including all repositories,
     /// packages discovered, and vulnerabilities found.
     /// </summary>
-    [HttpGet("projects/{projectId:int}")]
+    [HttpGet("projects/{projectId:guid}")]
     [ProducesResponseType(typeof(ApiResponse<ProjectDetailReportDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetProjectReport(int projectId, [FromQuery] int? scanRunId, CancellationToken ct)
+    public async Task<IActionResult> GetProjectReport(Guid projectId, [FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var report = await reportService.GetProjectReportAsync(projectId, scanRunId, ct);
         if (report is null)
@@ -62,10 +62,10 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     /// <summary>
     /// Export project report as CSV file.
     /// </summary>
-    [HttpGet("projects/{projectId:int}/export/csv")]
+    [HttpGet("projects/{projectId:guid}/export/csv")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ExportProjectCsv(int projectId, [FromQuery] int? scanRunId, CancellationToken ct)
+    public async Task<IActionResult> ExportProjectCsv(Guid projectId, [FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var report = await reportService.GetProjectReportAsync(projectId, scanRunId, ct);
         if (report is null)
@@ -98,11 +98,11 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     /// <summary>
     /// Export project vulnerabilities as CSV.
     /// </summary>
-    [HttpGet("projects/{projectId:int}/export/vulnerabilities-csv")]
+    [HttpGet("projects/{projectId:guid}/export/vulnerabilities-csv")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ExportProjectVulnerabilitiesCsv(
-        int projectId, [FromQuery] int? scanRunId, CancellationToken ct)
+        Guid projectId, [FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var report = await reportService.GetProjectReportAsync(projectId, scanRunId, ct);
         if (report is null)
@@ -144,7 +144,7 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     [HttpGet("vulnerabilities")]
     [ProducesResponseType(typeof(ApiResponse<List<VulnerabilitySummaryDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetVulnerabilitySummaries(
-        [FromQuery] string? severity, [FromQuery] int? scanRunId, CancellationToken ct)
+        [FromQuery] string? severity, [FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var summaries = await reportService.GetVulnerabilitySummariesAsync(severity, scanRunId, ct);
         return Ok(ApiResponse<List<VulnerabilitySummaryDto>>.Ok(summaries));
@@ -157,7 +157,7 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     [HttpGet("vulnerabilities/{cveId}")]
     [ProducesResponseType(typeof(ApiResponse<VulnerabilityDetailReportDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetVulnerabilityReport(string cveId, [FromQuery] int? scanRunId, CancellationToken ct)
+    public async Task<IActionResult> GetVulnerabilityReport(string cveId, [FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var report = await reportService.GetVulnerabilityReportAsync(cveId, scanRunId, ct);
         if (report is null)
@@ -171,7 +171,7 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
     [HttpGet("vulnerabilities/export/csv")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ExportVulnerabilitiesCsv(
-        [FromQuery] string? severity, [FromQuery] int? scanRunId, CancellationToken ct)
+        [FromQuery] string? severity, [FromQuery] Guid? scanRunId, CancellationToken ct)
     {
         var summaries = await reportService.GetVulnerabilitySummariesAsync(severity, scanRunId, ct);
 

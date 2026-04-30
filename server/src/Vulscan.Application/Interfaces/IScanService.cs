@@ -5,7 +5,7 @@ namespace Vulscan.Application.Interfaces;
 
 public interface IScanService
 {
-    Task<TriggerScanResponse> TriggerScanAsync(TriggerScanRequest request, int userId, CancellationToken ct = default);
-    Task<PagedResult<ScanRunDto>> GetScanHistoryAsync(int page, int pageSize, CancellationToken ct = default);
-    Task<ScanRunDto?> GetScanByIdAsync(int id, CancellationToken ct = default);
+    Task<TriggerScanResponse> TriggerScanAsync(TriggerScanRequest request, Guid userId, CancellationToken ct = default);
+    Task<PagedResult<ScanRunDto>> GetScanHistoryAsync(int page, int pageSize, Guid? instanceId = null, CancellationToken ct = default);
+    Task<ScanRunDto?> GetScanByIdAsync(Guid id, CancellationToken ct = default);
 }

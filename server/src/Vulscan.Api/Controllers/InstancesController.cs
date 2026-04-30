@@ -37,8 +37,8 @@ public class InstancesController(IInstanceService instanceService) : ControllerB
     /// <summary>
     /// Get instance by ID.
     /// </summary>
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<ApiResponse<InstanceDto>>> GetById(int id)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<InstanceDto>>> GetById(Guid id)
     {
         var instance = await instanceService.GetByIdAsync(id);
         if (instance is null)
@@ -69,9 +69,9 @@ public class InstancesController(IInstanceService instanceService) : ControllerB
     /// <summary>
     /// Update an existing instance.
     /// </summary>
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [Authorize(Roles = "Admin,SecurityAnalyst")]
-    public async Task<ActionResult<ApiResponse<InstanceDto>>> Update(int id, [FromBody] UpdateInstanceRequest request)
+    public async Task<ActionResult<ApiResponse<InstanceDto>>> Update(Guid id, [FromBody] UpdateInstanceRequest request)
     {
         var instance = await instanceService.UpdateAsync(id, request);
         if (instance is null)
@@ -83,9 +83,9 @@ public class InstancesController(IInstanceService instanceService) : ControllerB
     /// <summary>
     /// Delete an instance.
     /// </summary>
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    public async Task<ActionResult<ApiResponse>> Delete(Guid id)
     {
         var deleted = await instanceService.DeleteAsync(id);
         if (!deleted)
@@ -97,9 +97,9 @@ public class InstancesController(IInstanceService instanceService) : ControllerB
     /// <summary>
     /// Test connection to an instance.
     /// </summary>
-    [HttpPost("{id:int}/test")]
+    [HttpPost("{id:guid}/test")]
     [Authorize(Roles = "Admin,SecurityAnalyst")]
-    public async Task<ActionResult<ApiResponse>> TestConnection(int id)
+    public async Task<ActionResult<ApiResponse>> TestConnection(Guid id)
     {
         var (success, message) = await instanceService.TestConnectionAsync(id);
         return success

@@ -25,11 +25,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.AuditLog", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -42,8 +40,8 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<string>("Details")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("EntityId")
-                        .HasColumnType("int");
+                    b.Property<string>("EntityId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EntityType")
                         .IsRequired()
@@ -60,8 +58,8 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -74,11 +72,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.AzureDevOpsInstance", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AuthMethod")
                         .IsRequired()
@@ -126,11 +122,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.DiscoveredPackage", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -163,14 +157,14 @@ namespace Vulscan.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int>("RepositoryId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("RepositoryId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("SbomId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("SbomId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ScanRunId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ScanRunId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SourceFile")
                         .IsRequired()
@@ -200,11 +194,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Project", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AzureProjectId")
                         .IsRequired()
@@ -217,8 +209,8 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<DateTime>("DiscoveredAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("InstanceId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("InstanceId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -238,11 +230,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Repository", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CloneUrl")
                         .IsRequired()
@@ -276,8 +266,8 @@ namespace Vulscan.Infrastructure.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -292,11 +282,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Sbom", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CommitHash")
                         .HasMaxLength(100)
@@ -324,14 +312,14 @@ namespace Vulscan.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int>("RepositoryId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("RepositoryId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SbomJson")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ScanRunId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ScanRunId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -347,11 +335,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.ScanRun", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
@@ -371,8 +357,8 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<int>("HighCount")
                         .HasColumnType("int");
 
-                    b.Property<int?>("InstanceId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("InstanceId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("LowCount")
                         .HasColumnType("int");
@@ -397,8 +383,8 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<int>("TotalVulnerabilities")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TriggeredByUserId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("TriggeredByUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -418,11 +404,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -471,11 +455,11 @@ namespace Vulscan.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = 1,
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "admin@vulscan.local",
                             IsActive = true,
-                            PasswordHash = "$2a$12$OOF3yNNPWG8p2JnOjF4V5u83Oc..5jM7H5vvgNd7cJc5PQG.DLhVW",
+                            PasswordHash = "$2a$12$6iQL3yNjcPI40mMYzoinqOMnbCf6sIwyu2iQczG7DCK19bEAezyp.",
                             Role = "Admin",
                             Username = "admin"
                         });
@@ -483,11 +467,9 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Vulnerability", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -525,17 +507,17 @@ namespace Vulscan.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("RepositoryId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("RepositoryId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("SbomId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("SbomId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ScanRunId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ScanRunId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Severity")
                         .IsRequired()

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+using Vulscan.Application.DTOs.Common;
 using Vulscan.Domain.Entities;
 using Vulscan.Infrastructure.Data;
 
@@ -11,15 +12,15 @@ namespace Vulscan.Api.Controllers;
 /// API for accessing scan results, packages, and SBOM exports.
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class PackagesController(VulscanDbContext db, ILogger<PackagesController> logger) : ControllerBase
 {
     /// <summary>
     /// Get all packages discovered in a scan run.
     /// </summary>
-    [HttpGet("scan/{scanRunId}")]
-    public async Task<IActionResult> GetPackagesByScan(int scanRunId, [FromQuery] string? ecosystem = null)
+    [HttpGet("scan/{scanRunId:guid}")]
+    public async Task<IActionResult> GetPackagesByScan(Guid scanRunId, [FromQuery] string? ecosystem = null)
     {
         logger.LogInformation("Fetching packages for scan {ScanRunId}", scanRunId);
 
@@ -62,8 +63,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     /// <summary>
     /// Get packages by repository.
     /// </summary>
-    [HttpGet("repository/{repositoryId}")]
-    public async Task<IActionResult> GetPackagesByRepository(int repositoryId, [FromQuery] int? scanRunId = null)
+    [HttpGet("repository/{repositoryId:guid}")]
+    public async Task<IActionResult> GetPackagesByRepository(Guid repositoryId, [FromQuery] Guid? scanRunId = null)
     {
         var query = db.DiscoveredPackages
             .Where(p => p.RepositoryId == repositoryId)
@@ -82,7 +83,7 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
                 .Select(s => s.Id)
                 .FirstOrDefaultAsync();
 
-            if (latestScanId > 0)
+            if (latestScanId != Guid.Empty)
             {
                 query = query.Where(p => p.ScanRunId == latestScanId);
             }
@@ -100,7 +101,7 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     /// Get vulnerable packages only.
     /// </summary>
     [HttpGet("vulnerable")]
-    public async Task<IActionResult> GetVulnerablePackages([FromQuery] int? scanRunId = null)
+    public async Task<IActionResult> GetVulnerablePackages([FromQuery] Guid? scanRunId = null)
     {
         var query = db.DiscoveredPackages
             .Where(p => p.HasVulnerabilities)
@@ -128,6 +129,143 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
             .ToListAsync();
 
         return Ok(packages);
+    }
+
+    /// <summary>
+    /// Get packages enriched with vulnerability severity breakdown, repo and project names.
+    /// Supports filtering by scanRunId, repositoryId, projectId, ecosystem, and hasVulnerabilities.
+    /// </summary>
+    [HttpGet("inventory")]
+    public async Task<IActionResult> GetPackageInventory(
+        [FromQuery] Guid? scanRunId = null,
+        [FromQuery] Guid? repositoryId = null,
+        [FromQuery] Guid? projectId = null,
+        [FromQuery] string? ecosystem = null,
+        [FromQuery] bool? hasVulnerabilities = null)
+    {
+        // If no scanRunId provided, default to the latest scan run.
+        if (!scanRunId.HasValue && !repositoryId.HasValue && !projectId.HasValue)
+        {
+            scanRunId = await db.ScanRuns
+                .OrderByDescending(s => s.StartedAt)
+                .Select(s => (Guid?)s.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        var query = db.DiscoveredPackages
+            .Include(p => p.Repository)
+                .ThenInclude(r => r.Project)
+            .AsQueryable();
+
+        if (scanRunId.HasValue) query = query.Where(p => p.ScanRunId == scanRunId.Value);
+        if (repositoryId.HasValue) query = query.Where(p => p.RepositoryId == repositoryId.Value);
+        if (projectId.HasValue) query = query.Where(p => p.Repository.ProjectId == projectId.Value);
+        if (!string.IsNullOrWhiteSpace(ecosystem)) query = query.Where(p => p.Ecosystem == ecosystem);
+        if (hasVulnerabilities.HasValue) query = query.Where(p => p.HasVulnerabilities == hasVulnerabilities.Value);
+
+        var packages = await query
+            .OrderBy(p => p.Ecosystem)
+            .ThenBy(p => p.Name)
+            .Select(p => new
+            {
+                p.Id,
+                p.ScanRunId,
+                p.RepositoryId,
+                ProjectId = p.Repository.ProjectId,
+                ProjectName = p.Repository.Project.Name,
+                RepositoryName = p.Repository.Name,
+                p.Ecosystem,
+                p.Name,
+                p.Version,
+                p.SourceFile,
+                p.IsDirect,
+                p.HasVulnerabilities,
+                p.License,
+                p.Purl
+            })
+            .ToListAsync();
+
+        // Look up vulnerability severity breakdown per (ScanRunId, RepositoryId, PackageName, InstalledVersion).
+        var scanIds = packages.Select(p => p.ScanRunId).Distinct().ToList();
+        var vulns = await db.Vulnerabilities
+            .Where(v => scanIds.Contains(v.ScanRunId))
+            .Select(v => new
+            {
+                v.ScanRunId,
+                v.RepositoryId,
+                v.PackageName,
+                v.InstalledVersion,
+                v.CveId,
+                v.Severity,
+                v.CvssScore,
+                v.FixedVersion
+            })
+            .ToListAsync();
+
+        var vulnLookup = vulns
+            .GroupBy(v => (v.ScanRunId, v.RepositoryId, v.PackageName, v.InstalledVersion))
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var enriched = packages.Select(p =>
+        {
+            vulnLookup.TryGetValue((p.ScanRunId, p.RepositoryId, p.Name, p.Version), out var pkgVulns);
+            pkgVulns ??= [];
+            return new
+            {
+                p.Id,
+                p.ScanRunId,
+                p.RepositoryId,
+                p.ProjectId,
+                p.ProjectName,
+                p.RepositoryName,
+                p.Ecosystem,
+                p.Name,
+                p.Version,
+                p.SourceFile,
+                p.IsDirect,
+                p.HasVulnerabilities,
+                p.License,
+                p.Purl,
+                CriticalCount = pkgVulns.Count(v => v.Severity == Vulscan.Domain.Enums.VulnerabilitySeverity.Critical),
+                HighCount = pkgVulns.Count(v => v.Severity == Vulscan.Domain.Enums.VulnerabilitySeverity.High),
+                MediumCount = pkgVulns.Count(v => v.Severity == Vulscan.Domain.Enums.VulnerabilitySeverity.Medium),
+                LowCount = pkgVulns.Count(v => v.Severity == Vulscan.Domain.Enums.VulnerabilitySeverity.Low),
+                TotalVulnerabilities = pkgVulns.Count,
+                Vulnerabilities = pkgVulns.Select(v => new
+                {
+                    v.CveId,
+                    Severity = v.Severity.ToString(),
+                    v.CvssScore,
+                    v.FixedVersion
+                }).ToList()
+            };
+        }).ToList();
+
+        var ecosystemGroups = enriched
+            .GroupBy(p => p.Ecosystem)
+            .Select(g => new
+            {
+                ecosystem = g.Key,
+                totalPackages = g.Count(),
+                vulnerablePackages = g.Count(p => p.HasVulnerabilities),
+                criticalCount = g.Sum(p => p.CriticalCount),
+                highCount = g.Sum(p => p.HighCount),
+                mediumCount = g.Sum(p => p.MediumCount),
+                lowCount = g.Sum(p => p.LowCount)
+            })
+            .OrderBy(g => g.ecosystem)
+            .ToList();
+
+        return Ok(ApiResponse<object>.Ok(new
+        {
+            scanRunId,
+            repositoryId,
+            projectId,
+            totalPackages = enriched.Count,
+            vulnerablePackages = enriched.Count(p => p.HasVulnerabilities),
+            ecosystems = ecosystemGroups,
+            packages = enriched
+        }));
     }
 
     /// <summary>
@@ -163,8 +301,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     /// <summary>
     /// Export SBOM for a scan run in CycloneDX JSON format.
     /// </summary>
-    [HttpGet("scan/{scanRunId}/sbom")]
-    public async Task<IActionResult> ExportSbom(int scanRunId)
+    [HttpGet("scan/{scanRunId:guid}/sbom")]
+    public async Task<IActionResult> ExportSbom(Guid scanRunId)
     {
         logger.LogInformation("Exporting SBOM for scan {ScanRunId}", scanRunId);
 
@@ -215,8 +353,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     /// <summary>
     /// Download SBOM as file.
     /// </summary>
-    [HttpGet("scan/{scanRunId}/sbom/download")]
-    public async Task<IActionResult> DownloadSbom(int scanRunId, [FromQuery] string format = "json")
+    [HttpGet("scan/{scanRunId:guid}/sbom/download")]
+    public async Task<IActionResult> DownloadSbom(Guid scanRunId, [FromQuery] string format = "json")
     {
         logger.LogInformation("Downloading SBOM for scan {ScanRunId} (format: {Format})", scanRunId, format);
 
@@ -264,8 +402,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     /// <summary>
     /// Export packages as CSV.
     /// </summary>
-    [HttpGet("scan/{scanRunId}/csv")]
-    public async Task<IActionResult> ExportPackagesCsv(int scanRunId)
+    [HttpGet("scan/{scanRunId:guid}/csv")]
+    public async Task<IActionResult> ExportPackagesCsv(Guid scanRunId)
     {
         logger.LogInformation("Exporting packages CSV for scan {ScanRunId}", scanRunId);
 
@@ -290,8 +428,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     /// <summary>
     /// Get detailed scan results with packages grouped by repository.
     /// </summary>
-    [HttpGet("scan/{scanRunId}/details")]
-    public async Task<IActionResult> GetScanDetails(int scanRunId)
+    [HttpGet("scan/{scanRunId:guid}/details")]
+    public async Task<IActionResult> GetScanDetails(Guid scanRunId)
     {
         var scanRun = await db.ScanRuns
             .Include(s => s.Instance)

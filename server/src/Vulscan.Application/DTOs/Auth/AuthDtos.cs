@@ -23,7 +23,7 @@ public sealed record LoginResponse
 
 public sealed record UserInfo
 {
-    public int Id { get; init; }
+    public Guid Id { get; init; }
     public string Username { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
     public string Role { get; init; } = string.Empty;

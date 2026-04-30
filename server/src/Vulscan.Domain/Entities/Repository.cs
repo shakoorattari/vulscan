@@ -7,7 +7,7 @@ namespace Vulscan.Domain.Entities;
 /// </summary>
 public class Repository : BaseEntity
 {
-    public int ProjectId { get; set; }
+    public Guid ProjectId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string CloneUrl { get; set; } = string.Empty;
     public string DefaultBranch { get; set; } = "main";

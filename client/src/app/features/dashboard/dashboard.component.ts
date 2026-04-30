@@ -285,36 +285,36 @@ import { DashboardSummary, RecentScan, TopVulnerableRepo } from '../../core/mode
     }
 
     .kpi-card.critical .kpi-icon {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--sev-critical-bg);
+      color: var(--sev-critical);
     }
     .kpi-card.high .kpi-icon {
-      background: #fff3e0;
-      color: #e65100;
+      background: var(--sev-high-bg);
+      color: var(--sev-high);
     }
     .kpi-card.medium .kpi-icon {
-      background: #fff8e1;
-      color: #f9a825;
+      background: var(--sev-medium-bg);
+      color: var(--sev-medium);
     }
     .kpi-card.low .kpi-icon {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--sev-low-bg);
+      color: var(--sev-low);
     }
     .kpi-card.total .kpi-icon {
-      background: #e3f2fd;
-      color: #1565c0;
+      background: var(--brand-teal-50);
+      color: var(--brand-teal);
     }
     .kpi-card.repos .kpi-icon {
-      background: #f3e5f5;
-      color: #7b1fa2;
+      background: var(--brand-peach-50);
+      color: var(--brand-rust);
     }
     .kpi-card.scans .kpi-icon {
-      background: #e0f2f1;
-      color: #00695c;
+      background: var(--brand-navy-50);
+      color: var(--brand-navy);
     }
     .kpi-card.last-scan .kpi-icon {
-      background: #eceff1;
-      color: #455a64;
+      background: var(--neutral-200);
+      color: var(--neutral-700);
     }
 
     .kpi-data {
@@ -351,39 +351,39 @@ import { DashboardSummary, RecentScan, TopVulnerableRepo } from '../../core/mode
     }
 
     .status-badge.completed {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--status-success-bg);
+      color: var(--status-success);
     }
     .status-badge.running {
-      background: #e3f2fd;
-      color: #1565c0;
+      background: var(--status-info-bg);
+      color: var(--status-info);
     }
     .status-badge.queued {
-      background: #fff8e1;
-      color: #f9a825;
+      background: var(--status-warn-bg);
+      color: var(--status-warn);
     }
     .status-badge.failed {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--status-error-bg);
+      color: var(--status-error);
     }
 
     .severity.critical-text {
-      color: #c62828;
+      color: var(--sev-critical);
       font-weight: 600;
     }
     .severity.high-text {
-      color: #e65100;
+      color: var(--sev-high);
       font-weight: 600;
     }
 
     .status.completed {
-      color: #2e7d32;
+      color: var(--status-success);
     }
     .status.running {
-      color: #1565c0;
+      color: var(--status-info);
     }
     .status.failed {
-      color: #c62828;
+      color: var(--status-error);
     }
 
     .no-data {

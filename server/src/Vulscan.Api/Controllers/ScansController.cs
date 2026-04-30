@@ -31,26 +31,27 @@ public sealed class ScansController(
     }
 
     /// <summary>
-    /// Get paginated scan run history.
+    /// Get paginated scan run history. Optionally filter by Azure DevOps instance.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<ScanRunDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHistory(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25,
+        [FromQuery] Guid? instanceId = null,
         CancellationToken ct = default)
     {
-        var result = await scanService.GetScanHistoryAsync(page, pageSize, ct);
+        var result = await scanService.GetScanHistoryAsync(page, pageSize, instanceId, ct);
         return Ok(ApiResponse<PagedResult<ScanRunDto>>.Ok(result));
     }
 
     /// <summary>
     /// Get details of a specific scan run.
     /// </summary>
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<ScanRunDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id, CancellationToken ct)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var result = await scanService.GetScanByIdAsync(id, ct);
         if (result is null) return NotFound(ApiResponse.Fail("Scan run not found."));

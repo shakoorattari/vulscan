@@ -10,7 +10,7 @@ namespace Vulscan.Application.Services;
 public sealed class ScanService(DbContext dbContext) : IScanService
 {
     public async Task<TriggerScanResponse> TriggerScanAsync(
-        TriggerScanRequest request, int userId, CancellationToken ct = default)
+        TriggerScanRequest request, Guid userId, CancellationToken ct = default)
     {
         var instance = await dbContext.Set<AzureDevOpsInstance>()
             .FirstOrDefaultAsync(i => i.Id == request.InstanceId && i.IsEnabled, ct)
@@ -52,16 +52,23 @@ public sealed class ScanService(DbContext dbContext) : IScanService
     }
 
     public async Task<PagedResult<ScanRunDto>> GetScanHistoryAsync(
-        int page, int pageSize, CancellationToken ct = default)
+        int page, int pageSize, Guid? instanceId = null, CancellationToken ct = default)
     {
         var query = dbContext.Set<ScanRun>()
             .Include(s => s.Instance)
             .Include(s => s.TriggeredBy)
-            .OrderByDescending(s => s.StartedAt);
+            .AsQueryable();
 
-        var totalCount = await query.CountAsync(ct);
+        if (instanceId.HasValue)
+        {
+            query = query.Where(s => s.InstanceId == instanceId.Value);
+        }
 
-        var items = await query
+        var orderedQuery = query.OrderByDescending(s => s.StartedAt);
+
+        var totalCount = await orderedQuery.CountAsync(ct);
+
+        var items = await orderedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(s => MapToDto(s))
@@ -76,7 +83,7 @@ public sealed class ScanService(DbContext dbContext) : IScanService
         };
     }
 
-    public async Task<ScanRunDto?> GetScanByIdAsync(int id, CancellationToken ct = default)
+    public async Task<ScanRunDto?> GetScanByIdAsync(Guid id, CancellationToken ct = default)
     {
         var scan = await dbContext.Set<ScanRun>()
             .Include(s => s.Instance)
