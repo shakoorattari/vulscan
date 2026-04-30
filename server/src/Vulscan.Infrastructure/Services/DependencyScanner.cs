@@ -4,40 +4,20 @@ using Microsoft.Extensions.Logging;
 using Vulscan.Application.Interfaces;
 using Vulscan.Domain.Entities;
 using Vulscan.Domain.Enums;
+using Vulscan.Infrastructure.Clients;
 
 namespace Vulscan.Infrastructure.Services;
 
 /// <summary>
-/// Scans dependency files and checks against known vulnerable packages.
+/// Scans dependency files for packages and queries OSV.dev for known vulnerabilities.
 /// Returns all discovered packages and generates CycloneDX-compatible SBOM JSON.
 /// </summary>
-public sealed partial class DependencyScanner(ILogger<DependencyScanner> logger) : IDependencyScanner
+public sealed partial class DependencyScanner(
+    ILogger<DependencyScanner> logger,
+    IOsvApiClient osvClient,
+    IVulnerabilityCacheService cache) : IDependencyScanner
 {
-    // Known vulnerable packages database - in production, use OSV API, NVD, or commercial database
-    private static readonly Dictionary<string, List<KnownVulnerability>> KnownVulnerabilities = new(StringComparer.OrdinalIgnoreCase)
-    {
-        // npm packages
-        ["lodash"] = [
-            new("CVE-2021-23337", "4.17.21", VulnerabilitySeverity.High, 7.2, "Prototype pollution in lodash"),
-            new("CVE-2020-28500", "4.17.21", VulnerabilitySeverity.Medium, 5.3, "Regular expression DoS in lodash"),
-        ],
-        ["minimist"] = [new("CVE-2021-44906", "1.2.6", VulnerabilitySeverity.Critical, 9.8, "Prototype pollution")],
-        ["axios"] = [new("CVE-2023-45857", "1.6.0", VulnerabilitySeverity.High, 7.5, "CSRF vulnerability")],
-        ["express"] = [new("CVE-2024-29041", "4.19.2", VulnerabilitySeverity.Medium, 5.3, "Open redirect")],
-        ["jsonwebtoken"] = [new("CVE-2022-23529", "9.0.0", VulnerabilitySeverity.Critical, 9.8, "Insecure signature")],
-        ["moment"] = [new("CVE-2022-31129", "2.29.4", VulnerabilitySeverity.High, 7.5, "Path traversal")],
-        ["node-fetch"] = [new("CVE-2022-0235", "2.6.7", VulnerabilitySeverity.High, 8.8, "Information exposure")],
-        ["tar"] = [new("CVE-2021-37701", "6.1.11", VulnerabilitySeverity.High, 8.6, "Arbitrary file creation")],
-        // Python packages
-        ["django"] = [new("CVE-2024-27351", "4.2.11", VulnerabilitySeverity.High, 7.5, "Regex DoS")],
-        ["requests"] = [new("CVE-2024-35195", "2.32.0", VulnerabilitySeverity.Medium, 5.6, "Proxy-Auth leak")],
-        ["flask"] = [new("CVE-2023-30861", "2.3.2", VulnerabilitySeverity.High, 7.5, "Cookie security issue")],
-        ["pillow"] = [new("CVE-2024-28219", "10.3.0", VulnerabilitySeverity.High, 8.1, "Buffer overflow")],
-        ["pyyaml"] = [new("CVE-2020-14343", "5.4", VulnerabilitySeverity.Critical, 9.8, "Code execution")],
-        // .NET packages
-        ["newtonsoft.json"] = [new("CVE-2024-21907", "13.0.2", VulnerabilitySeverity.High, 7.5, "Stack overflow")],
-        ["system.text.json"] = [new("CVE-2024-21319", "8.0.1", VulnerabilitySeverity.Medium, 5.9, "DoS")],
-    };
+    private const int OsvBatchSize = 1000;
 
     public async Task<ScanResult> ScanDependenciesAsync(
         string fileName, string filePath, string content,
@@ -56,9 +36,14 @@ public sealed partial class DependencyScanner(ILogger<DependencyScanner> logger)
             var dependencies = ParseDependencies(fileName, content);
             logger.LogInformation("Parsed {Count} dependencies from {File}", dependencies.Count, filePath);
 
-            foreach (var dep in dependencies)
+            // Look up vulnerabilities for all dependencies via OSV (cached)
+            var vulnRefsByIndex = await LookupVulnerabilityRefsAsync(dependencies, ecosystem, ct);
+
+            for (var i = 0; i < dependencies.Count; i++)
             {
-                // Create package record for ALL dependencies
+                var dep = dependencies[i];
+                var refs = vulnRefsByIndex[i];
+
                 var package = new DiscoveredPackage
                 {
                     ScanRunId = scanRunId,
@@ -69,43 +54,23 @@ public sealed partial class DependencyScanner(ILogger<DependencyScanner> logger)
                     Version = dep.Version,
                     SourceFile = filePath,
                     IsDirect = dep.IsDirect,
-                    HasVulnerabilities = false,
+                    HasVulnerabilities = refs.Count > 0,
                     Purl = GeneratePurl(ecosystem, dep.Name, dep.Version),
                     CreatedAt = DateTime.UtcNow
                 };
 
-                // Check for vulnerabilities
-                if (KnownVulnerabilities.TryGetValue(dep.Name, out var knownVulns))
+                // Hydrate full vulnerability details for each match
+                foreach (var vref in refs)
                 {
-                    foreach (var vuln in knownVulns)
-                    {
-                        if (IsVersionVulnerable(dep.Version, vuln.FixedInVersion))
-                        {
-                            package.HasVulnerabilities = true;
+                    var vuln = await GetVulnerabilityDetailsAsync(vref.Id, ct);
+                    if (vuln is null) continue;
 
-                            vulnerabilities.Add(new Vulnerability
-                            {
-                                ScanRunId = scanRunId,
-                                RepositoryId = repositoryId,
-                                SbomId = sbomId,
-                                CveId = vuln.CveId,
-                                PackageName = dep.Name,
-                                InstalledVersion = dep.Version,
-                                FixedVersion = vuln.FixedInVersion,
-                                Severity = vuln.Severity,
-                                CvssScore = vuln.CvssScore,
-                                Description = vuln.Description,
-                                SourceDb = "Internal",
-                                Status = VulnerabilityStatus.New,
-                                FirstDetectedAt = DateTime.UtcNow,
-                                CreatedAt = DateTime.UtcNow
-                            });
+                    var entity = MapToVulnerability(vuln, dep, scanRunId, repositoryId, sbomId);
+                    vulnerabilities.Add(entity);
 
-                            logger.LogWarning(
-                                "🔴 VULNERABILITY: {CVE} in {Package}@{Version} (Severity: {Severity})",
-                                vuln.CveId, dep.Name, dep.Version, vuln.Severity);
-                        }
-                    }
+                    logger.LogWarning(
+                        "🔴 VULNERABILITY: {CVE} in {Package}@{Version} (Severity: {Severity})",
+                        entity.CveId, dep.Name, dep.Version, entity.Severity);
                 }
 
                 packages.Add(package);
@@ -519,20 +484,6 @@ public sealed partial class DependencyScanner(ILogger<DependencyScanner> logger)
         return version.TrimStart('^', '~', '>', '<', '=', ' ', 'v');
     }
 
-    private static bool IsVersionVulnerable(string installed, string fixedIn)
-    {
-        try
-        {
-            var installedV = ParseVersion(installed);
-            var fixedV = ParseVersion(fixedIn);
-            return installedV.CompareTo(fixedV) < 0;
-        }
-        catch
-        {
-            return true; // Assume vulnerable if can't parse
-        }
-    }
-
     private static Version ParseVersion(string version)
     {
         var clean = version.Split('-')[0].Split('+')[0];
@@ -541,6 +492,230 @@ public sealed partial class DependencyScanner(ILogger<DependencyScanner> logger)
         var minor = parts.Length > 1 && int.TryParse(parts[1], out var n) ? n : 0;
         var patch = parts.Length > 2 && int.TryParse(parts[2], out var p) ? p : 0;
         return new Version(major, minor, patch);
+    }
+
+    #endregion
+
+    #region OSV Integration
+
+    /// <summary>
+    /// Returns vulnerability refs (id+modified) per dependency, in input order.
+    /// Uses cache first; remaining packages are batched to OSV /v1/querybatch.
+    /// </summary>
+    private async Task<List<IReadOnlyList<OsvVulnerabilityRef>>> LookupVulnerabilityRefsAsync(
+        List<DependencyInfo> deps, string ecosystem, CancellationToken ct)
+    {
+        var osvEcosystem = MapToOsvEcosystem(ecosystem);
+        var results = new List<IReadOnlyList<OsvVulnerabilityRef>>(deps.Count);
+        for (var i = 0; i < deps.Count; i++) results.Add(Array.Empty<OsvVulnerabilityRef>());
+
+        // Skip lookup for unknown ecosystems
+        if (string.IsNullOrEmpty(osvEcosystem))
+        {
+            logger.LogDebug("Ecosystem {Ecosystem} not supported by OSV; skipping lookup", ecosystem);
+            return results;
+        }
+
+        // Build batch from cache misses
+        var pendingIndexes = new List<int>();
+        var pendingQueries = new List<OsvBatchQuery>();
+
+        for (var i = 0; i < deps.Count; i++)
+        {
+            var dep = deps[i];
+            if (string.IsNullOrWhiteSpace(dep.Version) || dep.Version == "*")
+            {
+                continue; // OSV requires a concrete version for matching
+            }
+
+            var cached = cache.GetCachedRefs(osvEcosystem, dep.Name, dep.Version);
+            if (cached is not null)
+            {
+                results[i] = cached;
+                continue;
+            }
+
+            pendingIndexes.Add(i);
+            pendingQueries.Add(new OsvBatchQuery
+            {
+                Package = new OsvPackage { Name = dep.Name, Ecosystem = osvEcosystem },
+                Version = dep.Version
+            });
+        }
+
+        if (pendingQueries.Count == 0)
+        {
+            logger.LogInformation("OSV lookup served entirely from cache ({Count} deps)", deps.Count);
+            return results;
+        }
+
+        // OSV batch endpoint accepts up to 1000 queries per request
+        for (var offset = 0; offset < pendingQueries.Count; offset += OsvBatchSize)
+        {
+            var slice = pendingQueries.Skip(offset).Take(OsvBatchSize).ToList();
+            var response = await osvClient.QueryBatchAsync(slice, ct);
+
+            if (response?.Results is null) continue;
+
+            for (var j = 0; j < response.Results.Count; j++)
+            {
+                var origIdx = pendingIndexes[offset + j];
+                var dep = deps[origIdx];
+                var refs = (IReadOnlyList<OsvVulnerabilityRef>)response.Results[j].Vulns;
+                results[origIdx] = refs;
+                cache.SetCachedRefs(osvEcosystem, dep.Name, dep.Version, refs);
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Returns full OSV vulnerability details, served from cache when possible.
+    /// </summary>
+    private async Task<OsvVulnerability?> GetVulnerabilityDetailsAsync(string id, CancellationToken ct)
+    {
+        var cached = cache.GetCachedVulnerability(id);
+        if (cached is not null) return cached;
+
+        var fetched = await osvClient.GetVulnerabilityAsync(id, ct);
+        if (fetched is not null) cache.SetCachedVulnerability(fetched);
+        return fetched;
+    }
+
+    private static Vulnerability MapToVulnerability(
+        OsvVulnerability vuln, DependencyInfo dep,
+        int scanRunId, int repositoryId, int? sbomId)
+    {
+        var cveId = vuln.Aliases.FirstOrDefault(a => a.StartsWith("CVE-", StringComparison.OrdinalIgnoreCase))
+                    ?? vuln.Id;
+        var cvss = ExtractCvssScore(vuln.Severity);
+        var severity = MapSeverity(cvss, vuln);
+        var fixedVersion = ExtractFixedVersion(vuln.Affected, dep.Name);
+        var description = !string.IsNullOrWhiteSpace(vuln.Summary) ? vuln.Summary : vuln.Details;
+
+        return new Vulnerability
+        {
+            ScanRunId = scanRunId,
+            RepositoryId = repositoryId,
+            SbomId = sbomId,
+            CveId = cveId,
+            PackageName = dep.Name,
+            InstalledVersion = dep.Version,
+            FixedVersion = fixedVersion,
+            Severity = severity,
+            CvssScore = cvss,
+            Description = Truncate(description, 4000),
+            SourceDb = "OSV",
+            Status = VulnerabilityStatus.New,
+            FirstDetectedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Parses the base score out of a CVSS vector string (e.g., "CVSS:3.1/AV:N/...").
+    /// Returns null if no parseable CVSS data is available.
+    /// </summary>
+    private static double? ExtractCvssScore(List<OsvSeverity> severities)
+    {
+        // Prefer CVSS_V3, fall back to V4/V2
+        var entry = severities.FirstOrDefault(s => s.Type == "CVSS_V3")
+                    ?? severities.FirstOrDefault(s => s.Type == "CVSS_V4")
+                    ?? severities.FirstOrDefault(s => s.Type == "CVSS_V2")
+                    ?? severities.FirstOrDefault();
+
+        if (entry?.Score is null) return null;
+
+        // OSV CVSS "score" is typically a vector string; compute base from impact metrics.
+        // We do not implement a full CVSS calculator here; return a conservative estimate
+            // using vector flags so callers get a reasonable severity bucket.
+        return EstimateCvssFromVector(entry.Score);
+    }
+
+    private static double? EstimateCvssFromVector(string vector)
+    {
+        // If the score is already a numeric value, use it directly
+        if (double.TryParse(vector, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var direct))
+        {
+            return Math.Clamp(direct, 0, 10);
+        }
+
+        // Otherwise approximate from impact metrics in the vector string
+        var hasHighImpact = vector.Contains("C:H") || vector.Contains("I:H") || vector.Contains("A:H");
+        var hasLowImpact = vector.Contains("C:L") || vector.Contains("I:L") || vector.Contains("A:L");
+        var networkAttack = vector.Contains("AV:N");
+        var noPrivs = vector.Contains("PR:N");
+
+        if (hasHighImpact && networkAttack && noPrivs) return 9.0;
+        if (hasHighImpact) return 7.5;
+        if (hasLowImpact) return 5.0;
+        return 3.5;
+    }
+
+    private static VulnerabilitySeverity MapSeverity(double? cvss, OsvVulnerability vuln)
+    {
+        // Try GitHub-style severity strings first (e.g., "CRITICAL")
+        var ghsa = vuln.DatabaseSpecific?.Severity
+                   ?? vuln.Affected.Select(a => a.DatabaseSpecific?.Severity).FirstOrDefault(s => !string.IsNullOrEmpty(s));
+
+        if (!string.IsNullOrEmpty(ghsa))
+        {
+            return ghsa.ToUpperInvariant() switch
+            {
+                "CRITICAL" => VulnerabilitySeverity.Critical,
+                "HIGH" => VulnerabilitySeverity.High,
+                "MODERATE" or "MEDIUM" => VulnerabilitySeverity.Medium,
+                "LOW" => VulnerabilitySeverity.Low,
+                _ => MapSeverityFromCvss(cvss)
+            };
+        }
+
+        return MapSeverityFromCvss(cvss);
+    }
+
+    private static VulnerabilitySeverity MapSeverityFromCvss(double? cvss) => cvss switch
+    {
+        >= 9.0 => VulnerabilitySeverity.Critical,
+        >= 7.0 => VulnerabilitySeverity.High,
+        >= 4.0 => VulnerabilitySeverity.Medium,
+        > 0 => VulnerabilitySeverity.Low,
+        _ => VulnerabilitySeverity.Medium
+    };
+
+    private static string? ExtractFixedVersion(List<OsvAffected> affected, string packageName)
+    {
+        var match = affected.FirstOrDefault(a =>
+            a.Package.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase));
+        if (match is null) match = affected.FirstOrDefault();
+
+        return match?.Ranges
+            .SelectMany(r => r.Events)
+            .FirstOrDefault(e => !string.IsNullOrEmpty(e.Fixed))?.Fixed;
+    }
+
+    /// <summary>
+    /// Maps internal ecosystem identifier to OSV.dev ecosystem identifier.
+    /// See: https://ossf.github.io/osv-schema/#affectedpackage-field
+    /// </summary>
+    private static string MapToOsvEcosystem(string ecosystem) => ecosystem switch
+    {
+        PackageEcosystem.Npm => "npm",
+        PackageEcosystem.NuGet => "NuGet",
+        PackageEcosystem.PyPi => "PyPI",
+        PackageEcosystem.Maven => "Maven",
+        PackageEcosystem.Go => "Go",
+        PackageEcosystem.Cargo => "crates.io",
+        PackageEcosystem.Composer => "Packagist",
+        PackageEcosystem.RubyGems => "RubyGems",
+        _ => string.Empty
+    };
+
+    private static string? Truncate(string? input, int max)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        return input.Length <= max ? input : input[..max];
     }
 
     #endregion
@@ -580,5 +755,4 @@ public sealed partial class DependencyScanner(ILogger<DependencyScanner> logger)
     #endregion
 
     private record DependencyInfo(string Name, string Version, bool IsDirect);
-    private record KnownVulnerability(string CveId, string FixedInVersion, VulnerabilitySeverity Severity, double CvssScore, string Description);
 }

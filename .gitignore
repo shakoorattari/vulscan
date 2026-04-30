@@ -374,3 +374,7 @@ FodyWeavers.xsd
 .env.local
 .env.*.local
 package-lock.json
+
+# Local development settings (contain secrets)
+server/src/Vulscan.Api/appsettings.Development.json
+server/src/Vulscan.Api/appsettings.Local.json

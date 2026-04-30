@@ -30,6 +30,7 @@ private static readonly Dictionary<string, List<KnownVulnerability>> KnownVulner
 ```
 
 **Problems:**
+
 - ❌ No real-time updates
 - ❌ Limited coverage (only ~15 packages)
 - ❌ Manual maintenance required
@@ -47,6 +48,7 @@ private static readonly Dictionary<string, List<KnownVulnerability>> KnownVulner
 **Best For:** Comprehensive CVE coverage, CVSS scoring, detailed metadata
 
 **API Details:**
+
 - **URL:** `https://services.nvd.nist.gov/rest/json/cves/2.0`
 - **Rate Limit:** 5 requests/30 seconds (no API key) | 50 requests/30 seconds (with API key)
 - **Free Tier:** Yes, with API key registration
@@ -66,6 +68,7 @@ private static readonly Dictionary<string, List<KnownVulnerability>> KnownVulner
 ⚠️ Requires package-to-CPE mapping
 
 **API Example:**
+
 ```bash
 # Get CVE details
 curl "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2021-23337"
@@ -86,6 +89,7 @@ curl "https://services.nvd.nist.gov/rest/json/cves/2.0?lastModStartDate=2026-04-
 **Best For:** Package ecosystem-native vulnerability data (npm, NuGet, PyPI, etc.)
 
 **API Details:**
+
 - **URL:** `https://api.osv.dev/v1/query`
 - **Rate Limit:** None (generous free tier)
 - **Free Tier:** Completely free
@@ -105,6 +109,7 @@ curl "https://services.nvd.nist.gov/rest/json/cves/2.0?lastModStartDate=2026-04-
 ⚠️ May have duplicate entries from different sources
 
 **API Example:**
+
 ```bash
 # Query by package (npm example)
 curl -X POST "https://api.osv.dev/v1/query" \
@@ -129,6 +134,7 @@ curl -X POST "https://api.osv.dev/v1/querybatch" \
 ```
 
 **Response Format:**
+
 ```json
 {
   "vulns": [
@@ -163,6 +169,7 @@ curl -X POST "https://api.osv.dev/v1/querybatch" \
 **Best For:** npm, NuGet, Maven, RubyGems - tight GitHub integration
 
 **API Details:**
+
 - **URL:** `https://api.github.com/graphql` (GraphQL API)
 - **Rate Limit:** 5,000 points/hour (authenticated)
 - **Free Tier:** Yes, requires GitHub token
@@ -182,6 +189,7 @@ curl -X POST "https://api.osv.dev/v1/querybatch" \
 ⚠️ Smaller coverage than OSV/NVD
 
 **GraphQL Query Example:**
+
 ```graphql
 {
   securityVulnerabilities(first: 100, ecosystem: NPM, package: "lodash") {
@@ -221,6 +229,7 @@ curl -X POST "https://api.osv.dev/v1/querybatch" \
 **Best For:** Offline scanning, container images, OS packages
 
 **Details:**
+
 - Built-in comprehensive vulnerability database
 - Auto-updates from multiple sources (NVD, OSV, distros)
 - Can run as a server mode (`trivy server`)
@@ -235,6 +244,7 @@ curl -X POST "https://api.osv.dev/v1/querybatch" \
 **Best For:** Similar to Trivy, excellent SBOM integration
 
 **Details:**
+
 - Uses its own curated vulnerability database
 - Strong CycloneDX/SPDX SBOM support
 - Can scan SBOMs directly
@@ -246,6 +256,7 @@ curl -X POST "https://api.osv.dev/v1/querybatch" \
 ### 🎯 **Option 1: OSV Integration (RECOMMENDED)**
 
 **Why OSV?**
+
 - ✅ **Zero rate limits** — no throttling issues
 - ✅ **Ecosystem-native** — directly matches package@version
 - ✅ **Batch API** — scan 1000 packages in one request
@@ -275,6 +286,7 @@ graph TD
 ### 🎯 **Option 2: Trivy/Grype Integration**
 
 **Why Trivy?**
+
 - ✅ **Comprehensive** — scans SBOM, repos, containers, filesystems
 - ✅ **Offline capable** — no external API calls needed
 - ✅ **Fast** — optimized for CI/CD pipelines
@@ -690,6 +702,7 @@ dotnet run --urls "http://localhost:5000"
 ```
 
 Check logs for:
+
 ```
 Querying OSV batch API with 150 packages
 ```
@@ -761,7 +774,7 @@ docker run -d -p 8080:8080 \
   aquasec/trivy:latest server --listen 0.0.0.0:8080
 ```
 
-2. **Create Trivy Client:**
+1. **Create Trivy Client:**
 
 ```csharp
 public interface ITrivyClient
@@ -832,6 +845,7 @@ public async Task<string> RunTrivyScanAsync(string sbomPath)
    - Use async/await throughout
 
 2. **Caching Strategy**
+
    ```
    Package@Version → Cache Key
    TTL: 24 hours for vulnerabilities
@@ -851,6 +865,7 @@ public async Task<string> RunTrivyScanAsync(string sbomPath)
    - Alert on API failures
 
 2. **Metrics**
+
    ```csharp
    - total_api_calls
    - api_errors_count
@@ -894,10 +909,10 @@ public async Task<string> RunTrivyScanAsync(string sbomPath)
 
 ### 📚 **Official Documentation**
 
-- **OSV.dev:** https://osv.dev/docs/
-- **NVD API:** https://nvd.nist.gov/developers/vulnerabilities
-- **Trivy:** https://aquasecurity.github.io/trivy/
-- **Grype:** https://github.com/anchore/grype
+- **OSV.dev:** <https://osv.dev/docs/>
+- **NVD API:** <https://nvd.nist.gov/developers/vulnerabilities>
+- **Trivy:** <https://aquasecurity.github.io/trivy/>
+- **Grype:** <https://github.com/anchore/grype>
 
 ### 🛠️ **Testing Tools**
 

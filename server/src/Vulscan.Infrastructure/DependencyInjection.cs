@@ -55,6 +55,29 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromMinutes(5);
         });
 
+        // ── Vulnerability scanning (OSV + cache) ──────────────────────────────
+        services.Configure<VulnerabilityCacheOptions>(
+            configuration.GetSection(VulnerabilityCacheOptions.SectionName));
+
+        // OSV.dev API client (https://osv.dev) — free, no API key, ecosystem-aware
+        services.AddHttpClient<IOsvApiClient, OsvApiClient>((sp, client) =>
+        {
+            var baseUrl = configuration["VulnerabilityScanning:OSV:ApiUrl"] ?? "https://api.osv.dev/";
+            if (!baseUrl.EndsWith('/')) baseUrl += "/";
+            client.BaseAddress = new Uri(baseUrl);
+            client.DefaultRequestHeaders.Add("User-Agent", "Vulscan/1.0");
+            client.Timeout = TimeSpan.FromSeconds(
+                configuration.GetValue("VulnerabilityScanning:OSV:TimeoutSeconds", 30));
+        });
+
+        // Memory cache for OSV lookups (Phase 2)
+        services.AddMemoryCache(options =>
+        {
+            options.SizeLimit = configuration.GetValue<long?>(
+                "VulnerabilityScanning:Cache:SizeLimit") ?? 100_000;
+        });
+        services.AddSingleton<IVulnerabilityCacheService, VulnerabilityCacheService>();
+
         // Dependency scanner for vulnerability detection
         services.AddScoped<IDependencyScanner, DependencyScanner>();
 
