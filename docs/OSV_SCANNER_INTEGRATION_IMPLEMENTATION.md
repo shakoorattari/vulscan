@@ -585,7 +585,7 @@ public class OsvScannerServiceTests
 
 ```bash
 # API request
-curl -X POST http://localhost:5000/api/v1/containerscans/scan \
+curl -X POST https://localhost:5071/api/v1/containerscans/scan \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -597,7 +597,7 @@ curl -X POST http://localhost:5000/api/v1/containerscans/scan \
 ### Example 2: Check OSV Scanner Health
 
 ```bash
-curl http://localhost:5000/api/v1/containerscans/health \
+curl https://localhost:5071/api/v1/containerscans/health \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Response:

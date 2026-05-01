@@ -59,14 +59,17 @@ VS Code automatically includes this file when `github.copilot.chat.codeGeneratio
    - Implement proper null handling
    - Use pattern matching where appropriate
 
-5. **TypeScript/Angular Best Practices**
-   - Use strict typing - avoid `any` type
-   - Use standalone components
-   - Implement proper reactive programming with RxJS
-   - Use Angular Material UI components consistently
-   - Follow Angular style guide
-   - Use signals for state management (Angular 19+)
-   - Implement proper error handling in HTTP calls
+5. **TypeScript & Angular Best Practices**
+   - **Strict Typing:** Always use interfaces or types. **Strictly avoid `any`.**
+   - **Standalone Architecture:** Use `standalone: true` for all components, directives, and pipes.
+   - **Component Scope:** Keep components small, focused, and single-purpose.
+   - **File Structure:** Maintain separate files for models, services, and components.
+   - **SoC (Separation of Concerns):** Keep templates (HTML), styles (SCSS), and logic (TS) in distinct files.
+   - **Reactive Programming:** Use **RxJS** for asynchronous data streams and event handling.
+   - **UI Framework:** Consistently use **Angular Material** components for all UI elements.
+   - **State Management:** Use **Angular Signals** for local and global state (Angular 19+ standards).
+   - **HTTP Reliability:** Implement explicit error handling (e.g., `catchError`) for all HTTP service calls.
+   - **Naming Conventions:** Strictly follow the official **Angular Style Guide**.
 
 ### Testing & Validation Workflow
 
@@ -147,6 +150,7 @@ Before considering any work complete:
 ## Technology Stack Reference
 
 ### Backend
+
 - .NET 10 with ASP.NET Core
 - Entity Framework Core (SQL Server)
 - Clean Architecture pattern
@@ -154,6 +158,7 @@ Before considering any work complete:
 - Serilog for logging
 
 ### Frontend
+
 - Angular 19+ (standalone components)
 - TypeScript (strict mode)
 - Angular Material UI
@@ -161,7 +166,7 @@ Before considering any work complete:
 - Signals for state management
 
 ### Database
+
 - SQL Server (production)
 - SQLite (development option)
 - Entity Framework migrations
-

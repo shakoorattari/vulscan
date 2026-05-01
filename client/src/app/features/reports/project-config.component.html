@@ -1,0 +1,209 @@
+<div class="project-config">
+      <div class="page-header">
+        <div class="breadcrumb">
+          <a class="back-link" (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon> Projects
+          </a>
+          <mat-icon class="separator">chevron_right</mat-icon>
+          <span class="current-page">{{ config()?.name ?? 'Project Configuration' }}</span>
+        </div>
+        <div class="header-actions">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="refreshConfig()"
+            [disabled]="loading()"
+            matTooltip="Refresh configuration"
+          >
+            <mat-icon>refresh</mat-icon> Refresh
+          </button>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="48"></mat-spinner>
+        </div>
+      } @else if (config()) {
+        <!-- Project Summary -->
+        <mat-card class="summary-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>settings</mat-icon> Configuration Summary
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="label">Total Repositories:</span>
+                <span class="value">{{ config()!.totalRepositories }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Enabled Repositories:</span>
+                <span class="value">{{ config()!.enabledRepositories }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Total Configured Branches:</span>
+                <span class="value">{{ config()!.totalConfiguredBranches }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Project Default Branch:</span>
+                <span class="value">{{ config()!.defaultBranch || 'None' }}</span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Repositories -->
+        <h3 class="section-title">
+          <mat-icon>source</mat-icon> Repositories ({{ config()!.totalRepositories }})
+        </h3>
+
+        <mat-accordion multi>
+          @for (repo of config()!.repositories; track repo.id) {
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon [class.disabled]="!repo.isEnabled">folder</mat-icon>
+                  {{ repo.name }}
+                  @if (!repo.isEnabled) {
+                    <mat-chip class="disabled-chip">Disabled</mat-chip>
+                  }
+                </mat-panel-title>
+                <mat-panel-description>
+                  Default: {{ repo.defaultBranch }} ·
+                  {{ repo.enabledBranches }} / {{ repo.totalBranches }} branches enabled
+                  @if (repo.lastScannedAt) {
+                    · Last scanned: {{ repo.lastScannedAt | date: 'short' }}
+                  }
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <!-- Repository Details -->
+              <div class="repo-details">
+                <div class="repo-info">
+                  <p><strong>Clone URL:</strong> {{ repo.cloneUrl }}</p>
+                  <p><strong>Default Branch:</strong> {{ repo.defaultBranch }}</p>
+                  @if (repo.lastScannedCommit) {
+                    <p><strong>Last Scanned Commit:</strong> {{ repo.lastScannedCommit }}</p>
+                  }
+                </div>
+
+                <div class="repo-actions">
+                  <button
+                    mat-stroked-button
+                    [color]="repo.isEnabled ? 'warn' : 'primary'"
+                    (click)="toggleRepository(repo)"
+                  >
+                    <mat-icon>{{ repo.isEnabled ? 'block' : 'check_circle' }}</mat-icon>
+                    {{ repo.isEnabled ? 'Disable' : 'Enable' }} Repository
+                  </button>
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <!-- Configured Branches -->
+              <div class="branches-section">
+                <div class="branches-header">
+                  <h4>
+                    <mat-icon>account_tree</mat-icon> Configured Branches ({{ repo.totalBranches }})
+                  </h4>
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    (click)="openAddBranchDialog(repo)"
+                    [disabled]="!repo.isEnabled"
+                  >
+                    <mat-icon>add</mat-icon> Add Branch
+                  </button>
+                </div>
+
+                @if (repo.configuredBranches.length === 0) {
+                  <div class="no-branches">
+                    <mat-icon>info</mat-icon>
+                    <p>
+                      No branches configured. The default branch will be used for scanning.
+                      <br />
+                      Add branches to scan multiple branches in this repository.
+                    </p>
+                  </div>
+                } @else {
+                  <table mat-table [dataSource]="repo.configuredBranches" class="branches-table">
+                    <ng-container matColumnDef="branchName">
+                      <th mat-header-cell *matHeaderCellDef>Branch Name</th>
+                      <td mat-cell *matCellDef="let branch">
+                        <mat-icon class="branch-icon">account_tree</mat-icon>
+                        {{ branch.branchName }}
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="isEnabled">
+                      <th mat-header-cell *matHeaderCellDef>Status</th>
+                      <td mat-cell *matCellDef="let branch">
+                        <mat-chip [class.enabled]="branch.isEnabled" [class.disabled]="!branch.isEnabled">
+                          {{ branch.isEnabled ? 'Enabled' : 'Disabled' }}
+                        </mat-chip>
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="scanCount">
+                      <th mat-header-cell *matHeaderCellDef>Scans</th>
+                      <td mat-cell *matCellDef="let branch">{{ branch.scanCount }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="lastScannedAt">
+                      <th mat-header-cell *matHeaderCellDef>Last Scanned</th>
+                      <td mat-cell *matCellDef="let branch">
+                        {{ branch.lastScannedAt ? (branch.lastScannedAt | date: 'short') : '—' }}
+                      </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="actions">
+                      <th mat-header-cell *matHeaderCellDef>Actions</th>
+                      <td mat-cell *matCellDef="let branch">
+                        <button
+                          mat-icon-button
+                          [color]="branch.isEnabled ? 'warn' : 'primary'"
+                          (click)="toggleBranch(repo, branch)"
+                          [matTooltip]="branch.isEnabled ? 'Disable branch' : 'Enable branch'"
+                        >
+                          <mat-icon>{{ branch.isEnabled ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
+                          color="warn"
+                          (click)="deleteBranch(repo, branch)"
+                          matTooltip="Remove branch"
+                        >
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="branchColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: branchColumns"></tr>
+                  </table>
+                }
+              </div>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+
+        @if (config()!.repositories.length === 0) {
+          <mat-card class="empty-state">
+            <mat-card-content>
+              <mat-icon>info</mat-icon>
+              <p>No repositories found for this project. Run discovery to add repositories.</p>
+            </mat-card-content>
+          </mat-card>
+        }
+      } @else {
+        <mat-card class="error-card">
+          <mat-card-content>
+            <mat-icon>error</mat-icon>
+            <p>Failed to load project configuration.</p>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>

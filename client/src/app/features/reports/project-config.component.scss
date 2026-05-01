@@ -1,0 +1,215 @@
+
+
+.project-config {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.back-link {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.separator {
+  font-size: 16px;
+  color: #999;
+}
+
+.current-page {
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.summary-card {
+  margin-bottom: 24px;
+}
+
+mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-item .label {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-item .value {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 16px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+mat-expansion-panel {
+  margin-bottom: 12px;
+}
+
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+mat-panel-title mat-icon.disabled {
+  opacity: 0.5;
+}
+
+.disabled-chip {
+  margin-left: 8px;
+  background-color: #f44336 !important;
+  color: white !important;
+  font-size: 11px;
+  height: 20px;
+  padding: 0 8px;
+}
+
+.repo-details {
+  padding: 16px 0;
+}
+
+.repo-info {
+  margin-bottom: 16px;
+}
+
+.repo-info p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.repo-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.branches-section {
+  padding: 16px 0;
+}
+
+.branches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.branches-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.no-branches {
+  text-align: center;
+  padding: 32px;
+  color: #666;
+}
+
+.no-branches mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.branches-table {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.branch-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+mat-chip.enabled {
+  background-color: #4caf50 !important;
+  color: white !important;
+}
+
+mat-chip.disabled {
+  background-color: #999 !important;
+  color: white !important;
+}
+
+.empty-state,
+.error-card {
+  text-align: center;
+  padding: 48px;
+}
+
+.empty-state mat-icon,
+.error-card mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.error-card mat-icon {
+  color: #f44336;
+}

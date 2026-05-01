@@ -1,0 +1,199 @@
+<div class="project-detail">
+      <div class="page-header">
+        <div class="breadcrumb">
+          <a class="back-link" (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon> Reports
+          </a>
+          <mat-icon class="separator">chevron_right</mat-icon>
+          <span class="current-page">{{ report()?.projectName ?? 'Project Detail' }}</span>
+        </div>
+        <div class="header-actions">
+          <button
+            mat-stroked-button
+            color="primary"
+            [routerLink]="['/packages']"
+            [queryParams]="{ projectId: projectId }"
+            matTooltip="View all packages discovered in this project"
+          >
+            <mat-icon>inventory_2</mat-icon> View Packages
+          </button>
+          <button mat-stroked-button (click)="exportPackagesCsv()">
+            <mat-icon>download</mat-icon> Packages CSV
+          </button>
+          <button mat-stroked-button (click)="exportVulnsCsv()">
+            <mat-icon>download</mat-icon> Vulnerabilities CSV
+          </button>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="48"></mat-spinner>
+        </div>
+      } @else if (report()) {
+        <!-- Project Summary KPIs -->
+        <div class="kpi-grid">
+          <mat-card class="kpi-card repos-card">
+            <mat-card-content>
+              <div class="kpi-icon"><mat-icon>source</mat-icon></div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ report()!.totalRepositories }}</span>
+                <span class="kpi-label">Repositories</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="kpi-card packages-card">
+            <mat-card-content>
+              <div class="kpi-icon"><mat-icon>inventory_2</mat-icon></div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ report()!.totalPackages | number }}</span>
+                <span class="kpi-label">Packages</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="kpi-card vulns-card">
+            <mat-card-content>
+              <div class="kpi-icon"><mat-icon>bug_report</mat-icon></div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ report()!.totalVulnerabilities }}</span>
+                <span class="kpi-label">Vulnerabilities</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="kpi-card severity-card">
+            <mat-card-content>
+              <div class="severity-breakdown">
+                <span class="sev-item critical">
+                  <strong>{{ report()!.criticalCount }}</strong> Critical
+                </span>
+                <span class="sev-item high">
+                  <strong>{{ report()!.highCount }}</strong> High
+                </span>
+                <span class="sev-item medium">
+                  <strong>{{ report()!.mediumCount }}</strong> Medium
+                </span>
+                <span class="sev-item low">
+                  <strong>{{ report()!.lowCount }}</strong> Low
+                </span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Ecosystem Breakdown -->
+        @if (report()!.ecosystemBreakdown.length) {
+          <mat-card class="section-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>layers</mat-icon> Ecosystem Breakdown
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="ecosystem-chips">
+                @for (eco of report()!.ecosystemBreakdown; track eco.ecosystem) {
+                  <div class="eco-chip">
+                    <strong>{{ eco.ecosystem | uppercase }}</strong>
+                    <span>{{ eco.totalPackages | number }} pkgs</span>
+                    <span>{{ eco.uniquePackages }} unique</span>
+                    @if (eco.vulnerablePackages > 0) {
+                      <span class="eco-vuln">{{ eco.vulnerablePackages }} vulnerable</span>
+                    }
+                  </div>
+                }
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Repositories -->
+        <h3 class="section-title">
+          <mat-icon>source</mat-icon> Repositories ({{ report()!.repositories.length }})
+        </h3>
+
+        <mat-accordion multi>
+          @for (repo of report()!.repositories; track repo.repositoryId) {
+            <mat-expansion-panel [expanded]="repo.vulnerabilities.length > 0">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon class="repo-icon">folder</mat-icon>
+                  {{ repo.repositoryName }}
+                </mat-panel-title>
+                <mat-panel-description>
+                  {{ repo.totalPackages | number }} packages
+                  @if (repo.vulnerablePackages > 0) {
+                    · <span class="vuln-count">{{ repo.vulnerablePackages }} vulnerable</span>
+                  }
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              @if (repo.vulnerabilities.length) {
+                <h4>Vulnerabilities ({{ repo.vulnerabilities.length }})</h4>
+                <table mat-table [dataSource]="repo.vulnerabilities" class="full-width report-table">
+                  <ng-container matColumnDef="cveId">
+                    <th mat-header-cell *matHeaderCellDef>CVE</th>
+                    <td mat-cell *matCellDef="let v">
+                      <a class="cve-link" (click)="openVuln(v.cveId); $event.stopPropagation()">
+                        {{ v.cveId }}
+                      </a>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="severity">
+                    <th mat-header-cell *matHeaderCellDef>Severity</th>
+                    <td mat-cell *matCellDef="let v">
+                      <span class="severity-chip" [class]="v.severity.toLowerCase()">
+                        {{ v.severity }}
+                      </span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="packageName">
+                    <th mat-header-cell *matHeaderCellDef>Package</th>
+                    <td mat-cell *matCellDef="let v">{{ v.packageName }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="installedVersion">
+                    <th mat-header-cell *matHeaderCellDef>Installed</th>
+                    <td mat-cell *matCellDef="let v">{{ v.installedVersion }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="fixedVersion">
+                    <th mat-header-cell *matHeaderCellDef>Fixed In</th>
+                    <td mat-cell *matCellDef="let v">
+                      {{ v.fixedVersion ?? '—' }}
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="cvssScore">
+                    <th mat-header-cell *matHeaderCellDef>CVSS</th>
+                    <td mat-cell *matCellDef="let v">
+                      {{ v.cvssScore != null ? v.cvssScore.toFixed(1) : '—' }}
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="ageDays">
+                    <th mat-header-cell *matHeaderCellDef>Age</th>
+                    <td mat-cell *matCellDef="let v">{{ v.ageDays }}d</td>
+                  </ng-container>
+                  <ng-container matColumnDef="status">
+                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                    <td mat-cell *matCellDef="let v">
+                      <span class="status-badge" [class]="v.status.toLowerCase()">
+                        {{ v.status }}
+                      </span>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="vulnColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: vulnColumns"></tr>
+                </table>
+              } @else {
+                <p class="clean-repo">
+                  <mat-icon>check_circle</mat-icon> No vulnerabilities detected in this repository.
+                </p>
+              }
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+      } @else if (errorMessage()) {
+        <mat-card class="error-card">
+          <mat-card-content>
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>

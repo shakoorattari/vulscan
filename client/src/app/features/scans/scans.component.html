@@ -1,0 +1,455 @@
+<div class="scans-page">
+      <header class="page-hero">
+        <div class="hero-text">
+          <h1>Scan Management</h1>
+          <p class="hero-subtitle">
+            Configure projects, run vulnerability scans, and review historical results.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <a mat-stroked-button routerLink="/discovery" matTooltip="Discover & bulk-import projects">
+            <mat-icon>travel_explore</mat-icon>
+            Discover
+          </a>
+          <button mat-flat-button color="primary" (click)="showAddProject.set(true)">
+            <mat-icon>add</mat-icon>
+            Add Project
+          </button>
+        </div>
+      </header>
+
+      <mat-tab-group #tabGroup [(selectedIndex)]="selectedTab" animationDuration="200ms">
+        <mat-tab label="Projects">
+          <div class="tab-content">
+            @if (showAddProject()) {
+              <mat-card class="form-card elevated">
+                <mat-card-header>
+                  <mat-card-title>Add Azure DevOps Project</mat-card-title>
+                  <mat-card-subtitle>
+                    Connect a project for SBOM and CVE scanning. The server (instance) is created
+                    automatically from the URL.
+                  </mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="form-grid">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Display Name</mat-label>
+                      <input
+                        matInput
+                        [(ngModel)]="newProject.name"
+                        placeholder="e.g., TransLynk Production"
+                      />
+                      <mat-hint>A friendly name for this project</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Azure DevOps Project URL</mat-label>
+                      <input
+                        matInput
+                        [(ngModel)]="newProject.projectUrl"
+                        placeholder="https://devops.ishj.ae/SDD/TransLynk"
+                      />
+                      <mat-hint>Full URL to your Azure DevOps project</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Username</mat-label>
+                      <input
+                        matInput
+                        [(ngModel)]="newProject.username"
+                        placeholder="user@domain.com"
+                      />
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Password / PAT</mat-label>
+                      <input
+                        matInput
+                        type="password"
+                        [(ngModel)]="newProject.password"
+                        placeholder="Enter password or PAT"
+                      />
+                      <mat-hint>Personal Access Token recommended</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Default Branch (optional)</mat-label>
+                      <input matInput [(ngModel)]="newProject.defaultBranch" placeholder="main" />
+                      <mat-hint>Leave blank to use each repo's default branch</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Schedule — Cron (optional)</mat-label>
+                      <input matInput [(ngModel)]="newProject.cronExpression" placeholder="0 2 * * *" />
+                      <mat-hint>5-field UTC cron. Empty = use global schedule.</mat-hint>
+                    </mat-form-field>
+                  </div>
+
+                  <div class="form-actions">
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      (click)="addProject()"
+                      [disabled]="addingProject()"
+                    >
+                      @if (addingProject()) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        <ng-container>
+                          <mat-icon>save</mat-icon>
+                          Save Project
+                        </ng-container>
+                      }
+                    </button>
+                    <button mat-stroked-button (click)="cancelAddProject()">Cancel</button>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+
+            <mat-card class="elevated">
+              <mat-card-header>
+                <mat-card-title>Configured Projects</mat-card-title>
+                <mat-card-subtitle>
+                  {{ projects().length }}
+                  {{ projects().length === 1 ? 'project' : 'projects' }} configured
+                </mat-card-subtitle>
+                <span class="spacer"></span>
+                <button mat-icon-button (click)="loadProjects()" matTooltip="Refresh">
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </mat-card-header>
+              <mat-card-content>
+                @if (loadingProjects()) {
+                  <div class="loading-container">
+                    <mat-spinner diameter="36"></mat-spinner>
+                  </div>
+                } @else if (projects().length > 0) {
+                  <div class="table-wrapper">
+                    <table mat-table [dataSource]="projects()" class="modern-table">
+                      <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef>Project</th>
+                        <td mat-cell *matCellDef="let p">
+                          <div class="project-cell">
+                            <div class="project-avatar">{{ initials(p.name) }}</div>
+                            <div class="project-info">
+                              <strong>{{ p.name }}</strong>
+                              <small class="text-muted">{{ p.azureProjectId }}</small>
+                              <small class="url-text">{{ p.url }}</small>
+                            </div>
+                          </div>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="lastScan">
+                        <th mat-header-cell *matHeaderCellDef>Last Scan</th>
+                        <td mat-cell *matCellDef="let p">
+                          @if (p.lastScannedAt) {
+                            <div class="last-scan-cell">
+                              <div class="last-scan-meta">
+                                <span class="status-badge" [class]="(p.lastScanStatus ?? '').toLowerCase()">
+                                  {{ p.lastScanStatus ?? 'Unknown' }}
+                                </span>
+                                <span class="text-muted timestamp" [matTooltip]="p.lastScannedAt | date : 'medium'">
+                                  {{ p.lastScannedAt | date : 'MMM d, y, h:mm a' }}
+                                </span>
+                              </div>
+                              <div class="vuln-summary">
+                                @if (p.lastScanCriticalCount > 0) {
+                                  <span class="severity-count critical" matTooltip="Critical">
+                                    {{ p.lastScanCriticalCount }}C
+                                  </span>
+                                }
+                                @if (p.lastScanHighCount > 0) {
+                                  <span class="severity-count high" matTooltip="High">
+                                    {{ p.lastScanHighCount }}H
+                                  </span>
+                                }
+                                @if (p.lastScanMediumCount > 0) {
+                                  <span class="severity-count medium" matTooltip="Medium">
+                                    {{ p.lastScanMediumCount }}M
+                                  </span>
+                                }
+                                @if (p.lastScanLowCount > 0) {
+                                  <span class="severity-count low" matTooltip="Low">
+                                    {{ p.lastScanLowCount }}L
+                                  </span>
+                                }
+                                @if (p.lastScanTotalVulnerabilities === 0) {
+                                  <span class="no-vulns">
+                                    <mat-icon class="check-icon">check_circle</mat-icon>
+                                    Clean
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                          } @else {
+                            <span class="text-muted">Never scanned</span>
+                          }
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="totals">
+                        <th mat-header-cell *matHeaderCellDef>Totals</th>
+                        <td mat-cell *matCellDef="let p">
+                          <div class="totals-cell">
+                            <span class="stat-pill">
+                              <mat-icon>folder</mat-icon>
+                              {{ p.repositoryCount }} repos
+                            </span>
+                            <span class="stat-pill">
+                              <mat-icon>history</mat-icon>
+                              {{ p.totalScans }} scans
+                            </span>
+                          </div>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="schedule">
+                        <th mat-header-cell *matHeaderCellDef>Schedule</th>
+                        <td mat-cell *matCellDef="let p">
+                          <button
+                            mat-stroked-button
+                            class="schedule-chip"
+                            (click)="editProjectCron(p)"
+                            [matTooltip]="p.cronExpression ? 'Project override (click to edit)' : 'Using global schedule (click to override)'"
+                          >
+                            <mat-icon>schedule</mat-icon>
+                            <span>{{ p.effectiveCron || '—' }}</span>
+                            @if (p.cronExpression) {
+                              <span class="override-dot" aria-hidden="true"></span>
+                            }
+                          </button>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="status">
+                        <th mat-header-cell *matHeaderCellDef>Status</th>
+                        <td mat-cell *matCellDef="let p">
+                          <span
+                            class="status-badge"
+                            [class.enabled]="p.isEnabled"
+                            [class.disabled]="!p.isEnabled"
+                          >
+                            <span class="status-dot"></span>
+                            {{ p.isEnabled ? 'Active' : 'Disabled' }}
+                          </span>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef class="actions-col">Actions</th>
+                        <td mat-cell *matCellDef="let p" class="actions-col">
+                          <button
+                            mat-stroked-button
+                            color="primary"
+                            (click)="viewScansForProject(p)"
+                            matTooltip="View scan history for this project"
+                          >
+                            <mat-icon>visibility</mat-icon>
+                            View Scans
+                          </button>
+                          <button
+                            mat-flat-button
+                            color="primary"
+                            (click)="triggerScanForProject(p.id)"
+                            [disabled]="triggering() || !p.isEnabled"
+                            matTooltip="Start vulnerability scan"
+                          >
+                            <mat-icon>play_arrow</mat-icon>
+                            Scan
+                          </button>
+                          <button
+                            mat-icon-button
+                            color="accent"
+                            (click)="editProject(p)"
+                            matTooltip="Edit project settings"
+                          >
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          <button
+                            mat-icon-button
+                            color="warn"
+                            (click)="deleteProject(p.id)"
+                            matTooltip="Delete project"
+                          >
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </td>
+                      </ng-container>
+
+                      <tr mat-header-row *matHeaderRowDef="projectColumns"></tr>
+                      <tr mat-row *matRowDef="let row; columns: projectColumns" class="data-row"></tr>
+                    </table>
+                  </div>
+                } @else {
+                  <div class="empty-state">
+                    <div class="empty-illustration">
+                      <mat-icon>folder_off</mat-icon>
+                    </div>
+                    <h3>No projects configured yet</h3>
+                    <p>Add an Azure DevOps project to start scanning for vulnerabilities.</p>
+                    <button mat-flat-button color="primary" (click)="showAddProject.set(true)">
+                      <mat-icon>add</mat-icon>
+                      Add Your First Project
+                    </button>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Scan History">
+          <div class="tab-content">
+            <mat-card class="elevated">
+              <mat-card-header>
+                <mat-card-title>Scan History</mat-card-title>
+                <mat-card-subtitle>
+                  @if (filteredProject(); as fp) {
+                    Filtered by <strong>{{ fp.name }}</strong>
+                  } @else {
+                    All projects
+                  }
+                </mat-card-subtitle>
+                <span class="spacer"></span>
+                @if (filteredProject()) {
+                  <button mat-stroked-button (click)="clearProjectFilter()" class="filter-clear">
+                    <mat-icon>filter_alt_off</mat-icon>
+                    Clear filter
+                  </button>
+                }
+                <button mat-icon-button (click)="loadScans()" matTooltip="Refresh">
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </mat-card-header>
+              <mat-card-content>
+                @if (loading()) {
+                  <div class="loading-container">
+                    <mat-spinner diameter="36"></mat-spinner>
+                  </div>
+                } @else if (scans()?.items?.length) {
+                  <div class="table-wrapper">
+                    <table mat-table [dataSource]="scans()!.items" class="modern-table">
+                      <ng-container matColumnDef="id">
+                        <th mat-header-cell *matHeaderCellDef>ID</th>
+                        <td mat-cell *matCellDef="let scan">
+                          <span class="scan-id">#{{ scan.id }}</span>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="project">
+                        <th mat-header-cell *matHeaderCellDef>Project</th>
+                        <td mat-cell *matCellDef="let scan">
+                          {{ scan.projectName ?? 'N/A' }}
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="startedAt">
+                        <th mat-header-cell *matHeaderCellDef>Started</th>
+                        <td mat-cell *matCellDef="let scan">
+                          {{ scan.startedAt | date : 'medium' }}
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="duration">
+                        <th mat-header-cell *matHeaderCellDef>Duration</th>
+                        <td mat-cell *matCellDef="let scan">
+                          {{ scan.durationSeconds > 0 ? scan.durationSeconds + 's' : '—' }}
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="status">
+                        <th mat-header-cell *matHeaderCellDef>Status</th>
+                        <td mat-cell *matCellDef="let scan">
+                          <span class="status-badge" [class]="scan.status.toLowerCase()">
+                            <span class="status-dot"></span>
+                            {{ scan.status }}
+                          </span>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="vulnerabilities">
+                        <th mat-header-cell *matHeaderCellDef>Vulnerabilities</th>
+                        <td mat-cell *matCellDef="let scan">
+                          <div class="vuln-summary">
+                            @if (scan.criticalCount > 0) {
+                              <span class="severity-count critical">{{ scan.criticalCount }}C</span>
+                            }
+                            @if (scan.highCount > 0) {
+                              <span class="severity-count high">{{ scan.highCount }}H</span>
+                            }
+                            @if (scan.mediumCount > 0) {
+                              <span class="severity-count medium">{{ scan.mediumCount }}M</span>
+                            }
+                            @if (scan.lowCount > 0) {
+                              <span class="severity-count low">{{ scan.lowCount }}L</span>
+                            }
+                            @if (scan.totalVulnerabilities === 0) {
+                              <span class="no-vulns">
+                                <mat-icon class="check-icon">check_circle</mat-icon>
+                                None
+                              </span>
+                            }
+                          </div>
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="triggeredBy">
+                        <th mat-header-cell *matHeaderCellDef>Triggered By</th>
+                        <td mat-cell *matCellDef="let scan">
+                          {{ scan.triggeredBy ?? 'System' }}
+                        </td>
+                      </ng-container>
+
+                      <ng-container matColumnDef="report">
+                        <th mat-header-cell *matHeaderCellDef class="actions-col">Report</th>
+                        <td mat-cell *matCellDef="let scan" class="actions-col">
+                          <a
+                            mat-stroked-button
+                            color="primary"
+                            [routerLink]="['/scans', scan.id, 'report']"
+                            [queryParams]="filteredProject() ? { projectId: filteredProject()!.id } : {}"
+                            matTooltip="View detailed report with PDF/CSV export"
+                          >
+                            <mat-icon>description</mat-icon>
+                            View Report
+                          </a>
+                        </td>
+                      </ng-container>
+
+                      <tr mat-header-row *matHeaderRowDef="scanColumns"></tr>
+                      <tr mat-row *matRowDef="let row; columns: scanColumns" class="data-row"></tr>
+                    </table>
+                  </div>
+
+                  <mat-paginator
+                    [length]="scans()!.totalCount"
+                    [pageSize]="pageSize"
+                    [pageIndex]="currentPage - 1"
+                    [pageSizeOptions]="[10, 25, 50]"
+                    (page)="onPageChange($event)"
+                    showFirstLastButtons
+                  >
+                  </mat-paginator>
+                } @else {
+                  <div class="empty-state">
+                    <div class="empty-illustration">
+                      <mat-icon>history</mat-icon>
+                    </div>
+                    <h3>No scan history</h3>
+                    <p>
+                      @if (filteredProject()) {
+                        No scans yet for this project. Trigger one from the Projects tab.
+                      } @else {
+                        Trigger a scan from the Projects tab to see results here.
+                      }
+                    </p>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>

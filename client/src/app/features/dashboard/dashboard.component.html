@@ -1,0 +1,210 @@
+<div class="dashboard">
+      <div class="page-header">
+        <h2>Executive Dashboard</h2>
+        <button mat-flat-button color="primary" (click)="refresh()">
+          <mat-icon>refresh</mat-icon>
+          Refresh
+        </button>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="48"></mat-spinner>
+        </div>
+      } @else if (summary()) {
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <mat-card class="kpi-card critical">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>error</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.criticalCount }}</span>
+                <span class="kpi-label">Critical</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card high">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>warning</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.highCount }}</span>
+                <span class="kpi-label">High</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card medium">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>info</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.mediumCount }}</span>
+                <span class="kpi-label">Medium</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card low">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.lowCount }}</span>
+                <span class="kpi-label">Low</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card total">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>bug_report</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.totalVulnerabilities }}</span>
+                <span class="kpi-label">Total Vulnerabilities</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card repos">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>folder</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.totalRepositories }}</span>
+                <span class="kpi-label">Repositories</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card scans">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>radar</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value">{{ summary()!.totalScans }}</span>
+                <span class="kpi-label">Total Scans</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="kpi-card last-scan">
+            <mat-card-content>
+              <div class="kpi-icon">
+                <mat-icon>schedule</mat-icon>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-value status" [class]="summary()!.lastScanStatus?.toLowerCase() ?? ''">
+                  {{ summary()!.lastScanStatus ?? 'N/A' }}
+                </span>
+                <span class="kpi-label">Last Scan</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="tables-grid">
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>Recent Scans</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              @if (summary()!.recentScans.length > 0) {
+                <table mat-table [dataSource]="summary()!.recentScans" class="full-width">
+                  <ng-container matColumnDef="id">
+                    <th mat-header-cell *matHeaderCellDef>ID</th>
+                    <td mat-cell *matCellDef="let scan">#{{ scan.id }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="startedAt">
+                    <th mat-header-cell *matHeaderCellDef>Started</th>
+                    <td mat-cell *matCellDef="let scan">{{ scan.startedAt | date : 'short' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="status">
+                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                    <td mat-cell *matCellDef="let scan">
+                      <span class="status-badge" [class]="scan.status.toLowerCase()">
+                        {{ scan.status }}
+                      </span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="repos">
+                    <th mat-header-cell *matHeaderCellDef>Repos</th>
+                    <td mat-cell *matCellDef="let scan">{{ scan.reposScanned }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="vulns">
+                    <th mat-header-cell *matHeaderCellDef>Vulns</th>
+                    <td mat-cell *matCellDef="let scan">{{ scan.totalVulnerabilities }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="triggeredBy">
+                    <th mat-header-cell *matHeaderCellDef>By</th>
+                    <td mat-cell *matCellDef="let scan">{{ scan.triggeredBy }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="recentScanColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: recentScanColumns"></tr>
+                </table>
+              } @else {
+                <p class="no-data">No scans recorded yet.</p>
+              }
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>Top Vulnerable Repositories</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              @if (summary()!.topVulnerableRepos.length > 0) {
+                <table mat-table [dataSource]="summary()!.topVulnerableRepos" class="full-width">
+                  <ng-container matColumnDef="repository">
+                    <th mat-header-cell *matHeaderCellDef>Repository</th>
+                    <td mat-cell *matCellDef="let repo">
+                      <strong>{{ repo.repositoryName }}</strong>
+                      <br />
+                      <small>{{ repo.projectName }}</small>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="critical">
+                    <th mat-header-cell *matHeaderCellDef>Critical</th>
+                    <td mat-cell *matCellDef="let repo">
+                      <span class="severity critical-text">{{ repo.criticalCount }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="high">
+                    <th mat-header-cell *matHeaderCellDef>High</th>
+                    <td mat-cell *matCellDef="let repo">
+                      <span class="severity high-text">{{ repo.highCount }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="total">
+                    <th mat-header-cell *matHeaderCellDef>Total</th>
+                    <td mat-cell *matCellDef="let repo">{{ repo.totalVulnerabilities }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="topRepoColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: topRepoColumns"></tr>
+                </table>
+              } @else {
+                <p class="no-data">No vulnerability data available.</p>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      } @else if (errorMessage()) {
+        <mat-card class="error-card">
+          <mat-card-content>
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>

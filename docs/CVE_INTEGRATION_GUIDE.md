@@ -698,7 +698,7 @@ Run your scanner and verify it queries OSV:
 
 ```bash
 cd server/src/Vulscan.Api
-dotnet run --urls "http://localhost:5000"
+dotnet run --urls "https://localhost:5071"
 ```
 
 Check logs for:

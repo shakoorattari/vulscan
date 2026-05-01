@@ -1085,7 +1085,7 @@ api:
   host: "0.0.0.0"
   port: 8000
   cors_origins:
-    - "http://localhost:4200"
+    - "https://localhost:4271"
     - "https://vulscan.ishj.ae"
   jwt_secret_ref: "vulscan/jwt-secret"
   jwt_algorithm: "HS256"

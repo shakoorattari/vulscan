@@ -1,0 +1,72 @@
+<div class="login-wrapper">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <div class="login-header">
+        <mat-icon class="login-logo">shield</mat-icon>
+        <h1>Vulscan</h1>
+        <p>Vulnerability Scanning Platform</p>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (errorMessage()) {
+        <div class="error-banner">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      <form (ngSubmit)="onLogin()" class="login-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input
+            matInput
+            [(ngModel)]="username"
+            name="username"
+            required
+            autocomplete="username"
+          />
+          <mat-icon matSuffix>person</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            [type]="hidePassword() ? 'password' : 'text'"
+            [(ngModel)]="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="hidePassword.set(!hidePassword())"
+          >
+            <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          class="full-width login-button"
+          [disabled]="loading()"
+        >
+          @if (loading()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            Sign In
+          }
+        </button>
+      </form>
+    </mat-card-content>
+
+    <mat-card-footer>
+      <p class="footer-text">Azure DevOps On-Premises Security Platform</p>
+    </mat-card-footer>
+  </mat-card>
+</div>

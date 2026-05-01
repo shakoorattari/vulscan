@@ -19,9 +19,14 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
+        path: 'projects',
+        loadComponent: () =>
+          import('./features/projects/projects.component').then((m) => m.ProjectsComponent),
+      },
+      {
         path: 'scans',
         loadComponent: () =>
-          import('./features/scans/scans.component').then((m) => m.ScansComponent),
+          import('./features/scans/scan-history.component').then((m) => m.ScanHistoryComponent),
       },
       {
         path: 'discovery',

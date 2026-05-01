@@ -1,0 +1,230 @@
+<div class="scan-history-page">
+  <header class="page-hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <mat-icon>history</mat-icon>
+        <span>Scan History</span>
+      </div>
+      <h1>Vulnerability Scan Results</h1>
+      <p class="hero-subtitle">
+        Track scan executions, monitor vulnerability trends, and access detailed security reports.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a mat-stroked-button routerLink="/projects" class="action-btn">
+        <mat-icon>folder</mat-icon>
+        <span>Go to Projects</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Stats Overview -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon primary">
+        <mat-icon>pending_actions</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-value">{{ totalScans() }}</span>
+        <span class="stat-label">Total Scans</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon success">
+        <mat-icon>check_circle</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-value">{{ completedScans() }}</span>
+        <span class="stat-label">Completed</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon error">
+        <mat-icon>pending_actions</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-value">{{ totalVulnerabilities() }}</span>
+        <span class="stat-label">Total Vulnerabilities</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon critical">
+        <mat-icon>warning</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-value">{{ criticalVulnerabilities() }}</span>
+        <span class="stat-label">Critical Issues</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <div class="filter-info">
+          @if (filteredProject()) {
+            <mat-chip-set>
+              <mat-chip highlighted>
+                <mat-icon>filter_alt</mat-icon>
+                Filtered by: {{ filteredProjectName() }}
+                <button matChipRemove (click)="clearProjectFilter()">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip>
+            </mat-chip-set>
+          } @else {
+            <span class="filter-label">
+              <mat-icon>apps</mat-icon>
+              Showing all projects
+            </span>
+          }
+        </div>
+        <button mat-icon-button (click)="loadScans()" matTooltip="Refresh scan history" class="refresh-btn">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Scan History Table -->
+  <mat-card class="history-card">
+    <mat-card-content>
+      @if (loading()) {
+        <div class="loading-state">
+          <mat-spinner diameter="48"></mat-spinner>
+          <p>Loading scan history...</p>
+        </div>
+      } @else if (scans()?.items?.length) {
+        <div class="scans-grid">
+          @for (scan of scans()!.items; track scan.id) {
+            <div class="scan-card" [class]="scan.status.toLowerCase()">
+              <div class="scan-header">
+                <div class="scan-id-section">
+                  <span class="scan-id">#{{ scan.id }}</span>
+                  <span class="status-badge" [class]="scan.status.toLowerCase()">
+                    <span class="status-dot"></span>
+                    {{ scan.status }}
+                  </span>
+                </div>
+                <div class="scan-time">
+                  <mat-icon>schedule</mat-icon>
+                  <span>{{ timeAgo(scan.startedAt) }}</span>
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="scan-info">
+                <div class="info-row">
+                  <mat-icon>folder</mat-icon>
+                  <span class="info-label">Project:</span>
+                  <span class="info-value">{{ scan.projectName || 'N/A' }}</span>
+                </div>
+                <div class="info-row">
+                  <mat-icon>person</mat-icon>
+                  <span class="info-label">Triggered by:</span>
+                  <span class="info-value">{{ scan.triggeredBy || 'System' }}</span>
+                </div>
+                <div class="info-row">
+                  <mat-icon>timer</mat-icon>
+                  <span class="info-label">Duration:</span>
+                  <span class="info-value">{{ formatDuration(scan.durationSeconds) }}</span>
+                </div>
+                <div class="info-row">
+                  <mat-icon>event</mat-icon>
+                  <span class="info-label">Started:</span>
+                  <span class="info-value">{{ scan.startedAt | date : 'MMM d, y, h:mm a' }}</span>
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="vulnerabilities-section">
+                <div class="vuln-header">
+                  <mat-icon>security</mat-icon>
+                  <span class="vuln-title">Vulnerability Summary</span>
+                </div>
+                <div class="vuln-grid">
+                  @if (scan.totalVulnerabilities === 0) {
+                    <div class="no-vulns-card">
+                      <mat-icon>verified</mat-icon>
+                      <span>No vulnerabilities found</span>
+                    </div>
+                  } @else {
+                    @if (scan.criticalCount > 0) {
+                      <div class="vuln-stat critical">
+                        <span class="vuln-count">{{ scan.criticalCount }}</span>
+                        <span class="vuln-label">Critical</span>
+                      </div>
+                    }
+                    @if (scan.highCount > 0) {
+                      <div class="vuln-stat high">
+                        <span class="vuln-count">{{ scan.highCount }}</span>
+                        <span class="vuln-label">High</span>
+                      </div>
+                    }
+                    @if (scan.mediumCount > 0) {
+                      <div class="vuln-stat medium">
+                        <span class="vuln-count">{{ scan.mediumCount }}</span>
+                        <span class="vuln-label">Medium</span>
+                      </div>
+                    }
+                    @if (scan.lowCount > 0) {
+                      <div class="vuln-stat low">
+                        <span class="vuln-count">{{ scan.lowCount }}</span>
+                        <span class="vuln-label">Low</span>
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <div class="scan-actions">
+                <a
+                  mat-flat-button
+                  color="primary"
+                  [routerLink]="['/scans', scan.id, 'report']"
+                  [queryParams]="filteredProject() ? { projectId: filteredProject() } : {}"
+                >
+                  <mat-icon>description</mat-icon>
+                  View Report
+                </a>
+              </div>
+            </div>
+          }
+        </div>
+
+        <mat-paginator
+          [length]="scans()!.totalCount"
+          [pageSize]="pageSize"
+          [pageIndex]="currentPage - 1"
+          [pageSizeOptions]="[12, 24, 48]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons
+        >
+        </mat-paginator>
+      } @else {
+        <div class="empty-state">
+          <div class="empty-illustration">
+            <mat-icon>history</mat-icon>
+          </div>
+          <h3>No Scan History Yet</h3>
+          <p>
+            @if (filteredProject()) {
+              No scans found for this project. Start a scan to see results here.
+            } @else {
+              No scans have been executed yet. Go to Projects to trigger your first scan.
+            }
+          </p>
+          <a mat-flat-button color="primary" routerLink="/projects">
+            <mat-icon>folder</mat-icon>
+            Go to Projects
+          </a>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

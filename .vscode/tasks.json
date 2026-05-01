@@ -2,9 +2,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "kill-port-5000",
+            "label": "kill-port-5071",
             "type": "shell",
-            "command": "lsof -ti:5000 | xargs kill -9 2>/dev/null || true",
+            "command": "lsof -ti:5071 | xargs kill -9 2>/dev/null || true",
             "presentation": {
                 "reveal": "silent",
                 "panel": "shared"
@@ -43,7 +43,7 @@
             "label": "clean-build-api",
             "dependsOrder": "sequence",
             "dependsOn": [
-                "kill-port-5000",
+                "kill-port-5071",
                 "clean-api",
                 "build-api"
             ],

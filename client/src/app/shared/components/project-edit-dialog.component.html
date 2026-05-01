@@ -1,0 +1,93 @@
+<h2 mat-dialog-title>
+      <mat-icon>edit</mat-icon>
+      Edit Project: {{ data.project.name }}
+    </h2>
+
+    <mat-dialog-content>
+      <form [formGroup]="form" class="edit-form">
+        <!-- Basic Settings -->
+        <h3 class="section-title">Basic Settings</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Project Name</mat-label>
+          <input matInput formControlName="name" />
+          <mat-icon matSuffix>label</mat-icon>
+          @if (form.get('name')?.hasError('required') && form.get('name')?.touched) {
+            <mat-error>Name is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Default Branch</mat-label>
+          <input matInput formControlName="defaultBranch" placeholder="e.g., main, develop" />
+          <mat-icon matSuffix>branch</mat-icon>
+          <mat-hint>Default branch for scanning repositories in this project</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Cron Schedule (optional)</mat-label>
+          <input matInput formControlName="cronExpression" placeholder="0 2 * * *" />
+          <mat-icon matSuffix matTooltip="5-field cron: minute hour day-of-month month day-of-week">schedule</mat-icon>
+          <mat-hint>Leave blank to use global schedule</mat-hint>
+        </mat-form-field>
+
+        <mat-slide-toggle formControlName="isEnabled" class="toggle">
+          Project Enabled
+        </mat-slide-toggle>
+
+        <!-- Credentials -->
+        <h3 class="section-title">Credentials (optional)</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" autocomplete="username" />
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-hint>Override instance-level credentials</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" autocomplete="new-password" />
+          <mat-icon matSuffix>lock</mat-icon>
+          <mat-hint>Leave blank to keep existing password</mat-hint>
+        </mat-form-field>
+
+        <!-- Email Notifications -->
+        <h3 class="section-title">Email Notifications</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Owner Name</mat-label>
+          <input matInput formControlName="ownerName" placeholder="John Doe" />
+          <mat-icon matSuffix>badge</mat-icon>
+          <mat-hint>Project owner or responsible person</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Owner Email</mat-label>
+          <input matInput type="email" formControlName="ownerEmail" placeholder="owner@example.com" />
+          <mat-icon matSuffix>email</mat-icon>
+          @if (form.get('ownerEmail')?.hasError('email')) {
+            <mat-error>Invalid email format</mat-error>
+          }
+          <mat-hint>Primary recipient for scan notifications</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>CC Emails</mat-label>
+          <input matInput formControlName="ccEmails" placeholder="user1@example.com, user2@example.com" />
+          <mat-icon matSuffix>group</mat-icon>
+          <mat-hint>Comma-separated list of additional recipients</mat-hint>
+        </mat-form-field>
+
+        <mat-slide-toggle formControlName="sendEmailNotifications" class="toggle">
+          Send Email Notifications
+        </mat-slide-toggle>
+      </form>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="null">Cancel</button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
+        <mat-icon>save</mat-icon> Save Changes
+      </button>
+    </mat-dialog-actions>

@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>Add Branch</h2>
+<mat-dialog-content>
+  <mat-form-field class="full-width">
+    <mat-label>Branch Name</mat-label>
+    <input
+      matInput
+      [formControl]="data.branchNameControl"
+      placeholder="e.g., main, develop, release/v1.0"
+      required
+    />
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button
+    mat-flat-button
+    color="primary"
+    [mat-dialog-close]="data.branchNameControl.value"
+    [disabled]="!data.branchNameControl.value?.trim()"
+  >
+    Add
+  </button>
+</mat-dialog-actions>

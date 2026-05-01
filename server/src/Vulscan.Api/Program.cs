@@ -90,7 +90,7 @@ try
         options.AddPolicy("AllowDashboard", policy =>
         {
             var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? ["http://localhost:4200"];
+                ?? ["https://localhost:4271"];
 
             policy.WithOrigins(origins)
                 .AllowAnyMethod()

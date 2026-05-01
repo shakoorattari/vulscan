@@ -1,0 +1,49 @@
+.edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 500px;
+      padding: 1rem 0;
+
+      .section-title {
+        margin: 1rem 0 0.5rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.87);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+        padding-bottom: 0.5rem;
+
+        &:first-child {
+          margin-top: 0;
+        }
+      }
+
+      mat-form-field {
+        width: 100%;
+      }
+
+      .toggle {
+        margin: 0.5rem 0;
+      }
+    }
+
+    h2[mat-dialog-title] {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      mat-icon {
+        color: var(--primary-color, #1976d2);
+      }
+    }
+
+    mat-dialog-content {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 600px) {
+      .edit-form {
+        min-width: unset;
+      }
+    }

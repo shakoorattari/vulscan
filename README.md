@@ -99,10 +99,10 @@ vulscan/
 cd server
 dotnet restore
 dotnet build
-dotnet run --project src/Vulscan.Api/Vulscan.Api.csproj --urls "http://localhost:5000"
+dotnet run --project src/Vulscan.Api/Vulscan.Api.csproj --urls "https://localhost:5071"
 ```
 
-The API will be available at `http://localhost:5000`
+The API will be available at `https://localhost:5071`
 
 **Default Admin Credentials:**
 
@@ -119,7 +119,7 @@ npm install
 npm start
 ```
 
-The dashboard will be available at `http://localhost:4200`
+The dashboard will be available at `https://localhost:4271`
 
 ## 📖 API Endpoints
 
@@ -213,7 +213,7 @@ Frontend configuration is in `client/src/environments/environment.ts`:
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:5000/api/v1'
+  apiUrl: 'https://localhost:5071/api/v1'
 };
 ```
 
