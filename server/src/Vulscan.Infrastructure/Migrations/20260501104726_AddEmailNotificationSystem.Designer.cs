@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vulscan.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using Vulscan.Infrastructure.Data;
 namespace Vulscan.Infrastructure.Migrations
 {
     [DbContext(typeof(VulscanDbContext))]
-    partial class VulscanDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260501104726_AddEmailNotificationSystem")]
+    partial class AddEmailNotificationSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

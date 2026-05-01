@@ -17,6 +17,7 @@ public sealed class ScanProcessor(
     DbContext dbContext,
     IAzureDevOpsClient azureDevOpsClient,
     IDependencyScanner dependencyScanner,
+    IEmailService emailService,
     ILogger<ScanProcessor> logger) : IScanProcessor
 {
     private static readonly string[] DependencyFilePatterns =
@@ -101,7 +102,7 @@ public sealed class ScanProcessor(
             if (repos.Count == 0)
             {
                 project.LastScannedAt = DateTime.UtcNow;
-                await CompleteScanAsync(scanRun, 0, 0, 0, 0, 0, 0, 0, "No repositories in project", ct);
+                await CompleteScanAsync(scanRun, 0, 0, 0, 0, 0, 0, 0, 0, "No repositories in project", ct);
                 return;
             }
 
@@ -121,14 +122,14 @@ public sealed class ScanProcessor(
 
             project.LastScannedAt = DateTime.UtcNow;
             await CompleteScanAsync(scanRun,
-                stats.ReposScanned, stats.ReposFailed,
+                stats.ReposScanned, stats.ReposFailed, stats.BranchesScanned,
                 stats.TotalVulnerabilities, stats.Critical,
                 stats.High, stats.Medium, stats.Low, null, ct);
 
             logger.LogInformation("═══════════════════════════════════════════════════════════════");
-            logger.LogInformation("✅ SCAN #{ScanRunId} DONE in {Ms}ms — repos:{R}/{T} pkgs:{P} vulns:{V}",
+            logger.LogInformation("✅ SCAN #{ScanRunId} DONE in {Ms}ms — repos:{R}/{T} branches:{B} pkgs:{P} vulns:{V}",
                 scanRunId, stopwatch.ElapsedMilliseconds,
-                stats.ReposScanned, repos.Count, stats.TotalPackages, stats.TotalVulnerabilities);
+                stats.ReposScanned, repos.Count, stats.BranchesScanned, stats.TotalPackages, stats.TotalVulnerabilities);
         }
         catch (Exception ex)
         {
@@ -146,14 +147,8 @@ public sealed class ScanProcessor(
         logger.LogInformation("───────────────────────────────────────────────────────────────");
         logger.LogInformation("📁 SCANNING REPO: {RepoName}", repo.Name);
 
-        // Branch resolution: project default → repo default
-        var branch = !string.IsNullOrWhiteSpace(project.DefaultBranch)
-            ? project.DefaultBranch!
-            : repo.DefaultBranch;
-
-        logger.LogInformation("   🔀 Branch: {Branch}", branch);
-
         var repoEntity = await dbContext.Set<Repository>()
+            .Include(r => r.ConfiguredBranches)
             .FirstOrDefaultAsync(r => r.ProjectId == project.Id && r.Name == repo.Name, ct);
 
         if (repoEntity == null)
@@ -171,6 +166,79 @@ public sealed class ScanProcessor(
             await dbContext.SaveChangesAsync(ct);
         }
 
+        // Skip disabled repositories
+        if (!repoEntity.IsEnabled)
+        {
+            logger.LogInformation("   ⚠️ Repository is disabled, skipping");
+            return;
+        }
+
+        // Determine which branches to scan
+        var branchesToScan = new List<string>();
+        var enabledConfiguredBranches = repoEntity.ConfiguredBranches
+            .Where(b => b.IsEnabled)
+            .ToList();
+
+        if (enabledConfiguredBranches.Any())
+        {
+            // Use configured branches
+            branchesToScan.AddRange(enabledConfiguredBranches.Select(b => b.BranchName));
+            logger.LogInformation("   🔀 Scanning {Count} configured branches", branchesToScan.Count);
+        }
+        else
+        {
+            // Fallback to default branch (project default → repo default)
+            var defaultBranch = !string.IsNullOrWhiteSpace(project.DefaultBranch)
+                ? project.DefaultBranch!
+                : repo.DefaultBranch;
+            branchesToScan.Add(defaultBranch);
+            logger.LogInformation("   🔀 Scanning default branch: {Branch}", defaultBranch);
+        }
+
+        int totalRepoPkgs = 0, totalRepoVulns = 0;
+
+        // Scan each branch
+        foreach (var branch in branchesToScan)
+        {
+            try
+            {
+                logger.LogInformation("   ├─ Branch: {Branch}", branch);
+                var (pkgs, vulns) = await ScanRepositoryBranchAsync(
+                    instance, project, repo, repoEntity, branch, creds, scanRun, stats, ct);
+                
+                totalRepoPkgs += pkgs;
+                totalRepoVulns += vulns;
+                stats.BranchesScanned++;
+
+                // Update branch scan statistics if this is a configured branch
+                var configuredBranch = enabledConfiguredBranches.FirstOrDefault(b => 
+                    b.BranchName.Equals(branch, StringComparison.OrdinalIgnoreCase));
+                if (configuredBranch != null)
+                {
+                    configuredBranch.LastScannedAt = DateTime.UtcNow;
+                    configuredBranch.ScanCount++;
+                    configuredBranch.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "   ❌ Failed to scan branch {Branch}", branch);
+            }
+        }
+
+        repoEntity.LastScannedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(ct);
+        stats.ReposScanned++;
+        logger.LogInformation("   📊 Repo summary: {Pkgs} pkgs, {Vulns} vulns across {Branches} branches", 
+            totalRepoPkgs, totalRepoVulns, branchesToScan.Count);
+    }
+
+    private async Task<(int packages, int vulnerabilities)> ScanRepositoryBranchAsync(
+        AzureDevOpsInstance instance, Project project,
+        AzureDevOpsRepo repo, Repository repoEntity, string branch,
+        (string Username, string Password) creds,
+        ScanRun scanRun, ScanStats stats, CancellationToken ct)
+    {
         var items = await azureDevOpsClient.GetItemsAsync(
             instance.Url, instance.Collection, project.AzureProjectId, repo.Name,
             "/", branch, creds.Username, creds.Password, ct);
@@ -181,16 +249,13 @@ public sealed class ScanProcessor(
 
         if (depFiles.Count == 0)
         {
-            logger.LogInformation("   ⚠️ No dependency files");
-            stats.ReposScanned++;
-            repoEntity.LastScannedAt = DateTime.UtcNow;
-            await dbContext.SaveChangesAsync(ct);
-            return;
+            logger.LogInformation("      ⚠️ No dependency files");
+            return (0, 0);
         }
 
-        logger.LogInformation("   📋 {Count} dependency files", depFiles.Count);
+        logger.LogInformation("      📋 {Count} dependency files", depFiles.Count);
 
-        int repoPkgs = 0, repoVulns = 0;
+        int branchPkgs = 0, branchVulns = 0;
 
         foreach (var file in depFiles)
         {
@@ -206,6 +271,7 @@ public sealed class ScanProcessor(
                 {
                     RepositoryId = repoEntity.Id,
                     ScanRunId = scanRun.Id,
+                    BranchName = branch,
                     Format = "CycloneDX",
                     Generator = "Vulscan",
                     GeneratedAt = DateTime.UtcNow,
@@ -226,15 +292,20 @@ public sealed class ScanProcessor(
                 {
                     foreach (var pkg in result.Packages) pkg.SbomId = sbom.Id;
                     dbContext.Set<DiscoveredPackage>().AddRange(result.Packages);
-                    repoPkgs += result.Packages.Count;
+                    branchPkgs += result.Packages.Count;
                     stats.TotalPackages += result.Packages.Count;
                 }
 
                 if (result.Vulnerabilities.Count > 0)
                 {
-                    foreach (var v in result.Vulnerabilities) v.SbomId = sbom.Id;
+                    // Set branch name for each vulnerability
+                    foreach (var v in result.Vulnerabilities)
+                    {
+                        v.SbomId = sbom.Id;
+                        v.BranchName = branch;
+                    }
                     dbContext.Set<Vulnerability>().AddRange(result.Vulnerabilities);
-                    repoVulns += result.Vulnerabilities.Count;
+                    branchVulns += result.Vulnerabilities.Count;
                     stats.TotalVulnerabilities += result.Vulnerabilities.Count;
                     stats.Critical += result.Vulnerabilities.Count(v => v.Severity == VulnerabilitySeverity.Critical);
                     stats.High += result.Vulnerabilities.Count(v => v.Severity == VulnerabilitySeverity.High);
@@ -246,14 +317,12 @@ public sealed class ScanProcessor(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "❌ Failed processing {Path}", file.Path);
+                logger.LogError(ex, "      ❌ Failed processing {Path}", file.Path);
             }
         }
 
-        repoEntity.LastScannedAt = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync(ct);
-        stats.ReposScanned++;
-        logger.LogInformation("   📊 Repo summary: {Pkgs} pkgs, {Vulns} vulns", repoPkgs, repoVulns);
+        logger.LogInformation("      📊 Branch {Branch}: {Pkgs} pkgs, {Vulns} vulns", branch, branchPkgs, branchVulns);
+        return (branchPkgs, branchVulns);
     }
 
     private static bool IsDependencyFile(string fileName)
@@ -270,7 +339,7 @@ public sealed class ScanProcessor(
     }
 
     private async Task CompleteScanAsync(
-        ScanRun scanRun, int reposScanned, int reposFailed,
+        ScanRun scanRun, int reposScanned, int reposFailed, int branchesScanned,
         int totalVulns, int critical, int high, int medium, int low,
         string? errorLog, CancellationToken ct)
     {
@@ -279,6 +348,7 @@ public sealed class ScanProcessor(
         scanRun.DurationSeconds = (int)(DateTime.UtcNow - scanRun.StartedAt).TotalSeconds;
         scanRun.ReposScanned = reposScanned;
         scanRun.ReposFailed = reposFailed;
+        scanRun.BranchesScanned = branchesScanned;
         scanRun.TotalVulnerabilities = totalVulns;
         scanRun.CriticalCount = critical;
         scanRun.HighCount = high;
@@ -286,6 +356,41 @@ public sealed class ScanProcessor(
         scanRun.LowCount = low;
         scanRun.ErrorLog = errorLog;
         await dbContext.SaveChangesAsync(ct);
+
+        // Send email notification if enabled
+        try
+        {
+            var project = await dbContext.Set<Project>()
+                .FirstOrDefaultAsync(p => p.Id == scanRun.ProjectId, ct);
+
+            if (project?.SendEmailNotifications == true && !string.IsNullOrEmpty(project.OwnerEmail))
+            {
+                logger.LogInformation("Sending email notification for scan {ScanId} to {Email}", 
+                    scanRun.Id, project.OwnerEmail);
+
+                var (success, message) = await emailService.SendScanNotificationAsync(
+                    scanRun.Id, 
+                    includePdfAttachment: false,  // PDF generation not yet implemented
+                    includeHtmlAttachment: true,
+                    additionalRecipients: null,
+                    ct);
+
+                if (success)
+                {
+                    logger.LogInformation("Email notification sent successfully for scan {ScanId}", scanRun.Id);
+                }
+                else
+                {
+                    logger.LogWarning("Failed to send email notification for scan {ScanId}: {Message}", 
+                        scanRun.Id, message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't fail the scan if email fails
+            logger.LogError(ex, "Error sending email notification for scan {ScanId}", scanRun.Id);
+        }
     }
 
     private async Task FailScanAsync(ScanRun scanRun, string error, CancellationToken ct)
@@ -319,6 +424,7 @@ public sealed class ScanProcessor(
     {
         public int ReposScanned;
         public int ReposFailed;
+        public int BranchesScanned;
         public int TotalPackages;
         public int TotalVulnerabilities;
         public int Critical, High, Medium, Low;

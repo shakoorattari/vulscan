@@ -48,6 +48,8 @@ public static class DependencyInjection
         // Infrastructure services
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ISmtpConfigurationService, SmtpConfigurationService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         // Azure DevOps client (HTTP client with longer timeout for repo operations)
         services.AddHttpClient<IAzureDevOpsClient, AzureDevOpsClient>(client =>

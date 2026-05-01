@@ -214,11 +214,15 @@ import { ApiService } from '../../core/services/api.service';
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let p">
                       <button mat-icon-button matTooltip="View Details"
-                              (click)="openProjectDetail(p.projectId)">
+                              (click)="openProjectDetail(p.projectId); $event.stopPropagation()">
                         <mat-icon>visibility</mat-icon>
                       </button>
+                      <button mat-icon-button matTooltip="Configure Project"
+                              (click)="openProjectConfig(p.projectId); $event.stopPropagation()">
+                        <mat-icon>settings</mat-icon>
+                      </button>
                       <button mat-icon-button matTooltip="Export CSV"
-                              (click)="exportProjectCsv(p.projectId, p.projectName)">
+                              (click)="exportProjectCsv(p.projectId, p.projectName); $event.stopPropagation()">
                         <mat-icon>download</mat-icon>
                       </button>
                     </td>
@@ -637,6 +641,10 @@ export class ReportsComponent implements OnInit {
 
   openProjectDetail(projectId: string): void {
     this.router.navigate(['/reports/projects', projectId]);
+  }
+
+  openProjectConfig(projectId: string): void {
+    this.router.navigate(['/reports/projects', projectId, 'config']);
   }
 
   openVulnDetail(cveId: string): void {

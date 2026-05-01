@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vulscan.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using Vulscan.Infrastructure.Data;
 namespace Vulscan.Infrastructure.Migrations
 {
     [DbContext(typeof(VulscanDbContext))]
-    partial class VulscanDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260501075410_AddRepositoryBranchConfiguration")]
+    partial class AddRepositoryBranchConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -192,72 +195,6 @@ namespace Vulscan.Infrastructure.Migrations
                     b.ToTable("DiscoveredPackages", "vulscan");
                 });
 
-            modelBuilder.Entity("Vulscan.Domain.Entities.EmailLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<long?>("AttachmentSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CcEmails")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("EmailType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsSent")
-                        .HasColumnType("bit");
-
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("int");
-
-                    b.Property<Guid?>("ScanRunId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ToEmails")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("TriggeredByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProjectId");
-
-                    b.HasIndex("ScanRunId");
-
-                    b.HasIndex("TriggeredByUserId");
-
-                    b.ToTable("EmailLogs", "vulscan");
-                });
-
             modelBuilder.Entity("Vulscan.Domain.Entities.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -268,9 +205,6 @@ namespace Vulscan.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("CcEmails")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -305,15 +239,6 @@ namespace Vulscan.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("OwnerEmail")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OwnerName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("SendEmailNotifications")
-                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -586,68 +511,6 @@ namespace Vulscan.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Vulscan.Domain.Entities.SmtpConfiguration", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FromEmail")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FromName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Host")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("LastTestResult")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("LastTestedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Password")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Port")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReplyToEmail")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TimeoutSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("UseSsl")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("UseStartTls")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Username")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SmtpConfigurations", "vulscan");
-                });
-
             modelBuilder.Entity("Vulscan.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -839,27 +702,6 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Navigation("Sbom");
 
                     b.Navigation("ScanRun");
-                });
-
-            modelBuilder.Entity("Vulscan.Domain.Entities.EmailLog", b =>
-                {
-                    b.HasOne("Vulscan.Domain.Entities.Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectId");
-
-                    b.HasOne("Vulscan.Domain.Entities.ScanRun", "ScanRun")
-                        .WithMany()
-                        .HasForeignKey("ScanRunId");
-
-                    b.HasOne("Vulscan.Domain.Entities.User", "TriggeredByUser")
-                        .WithMany()
-                        .HasForeignKey("TriggeredByUserId");
-
-                    b.Navigation("Project");
-
-                    b.Navigation("ScanRun");
-
-                    b.Navigation("TriggeredByUser");
                 });
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Project", b =>

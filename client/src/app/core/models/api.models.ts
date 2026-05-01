@@ -159,6 +159,10 @@ export interface UpdateProjectRequest {
   defaultBranch?: string;
   cronExpression?: string;
   isEnabled: boolean;
+  ownerName?: string;
+  ownerEmail?: string;
+  ccEmails?: string;
+  sendEmailNotifications?: boolean;
 }
 
 export interface ProjectDto {
@@ -187,6 +191,10 @@ export interface ProjectDto {
   lastScanTotalVulnerabilities: number;
   cronExpression?: string;
   effectiveCron?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ccEmails?: string;
+  sendEmailNotifications?: boolean;
 }
 
 export interface ProjectSummaryDto {
@@ -423,4 +431,56 @@ export interface PackageInventory {
   vulnerablePackages: number;
   ecosystems: EcosystemGroupSummary[];
   packages: PackageItem[];
+}
+
+// ── Repository Configuration ──────────────────────────────────────────
+export interface RepositoryConfigDto {
+  id: string;
+  projectId: string;
+  name: string;
+  cloneUrl: string;
+  defaultBranch: string;
+  isEnabled: boolean;
+  lastScannedAt?: string;
+  lastScannedCommit?: string;
+  configuredBranches: BranchConfigDto[];
+  totalBranches: number;
+  enabledBranches: number;
+}
+
+export interface BranchConfigDto {
+  id: string;
+  repositoryId: string;
+  branchName: string;
+  isEnabled: boolean;
+  lastScannedAt?: string;
+  lastScannedCommit?: string;
+  scanCount: number;
+  createdAt: string;
+}
+
+export interface AddBranchRequest {
+  branchName: string;
+  isEnabled: boolean;
+}
+
+export interface UpdateBranchRequest {
+  isEnabled: boolean;
+}
+
+export interface UpdateRepositoryRequest {
+  isEnabled: boolean;
+  defaultBranch?: string;
+}
+
+export interface ProjectConfigurationDto {
+  id: string;
+  name: string;
+  url: string;
+  isEnabled: boolean;
+  defaultBranch?: string;
+  repositories: RepositoryConfigDto[];
+  totalRepositories: number;
+  totalConfiguredBranches: number;
+  enabledRepositories: number;
 }

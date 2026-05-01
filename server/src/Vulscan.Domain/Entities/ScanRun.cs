@@ -19,6 +19,10 @@ public class ScanRun : BaseEntity
     public ScanStatus Status { get; set; } = ScanStatus.Queued;
     public int ReposScanned { get; set; }
     public int ReposFailed { get; set; }
+    
+    /// <summary>Number of branches scanned across all repositories.</summary>
+    public int BranchesScanned { get; set; }
+    
     public int TotalVulnerabilities { get; set; }
     public int CriticalCount { get; set; }
     public int HighCount { get; set; }

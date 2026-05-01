@@ -9,6 +9,10 @@ public class Sbom : BaseEntity
 {
     public Guid RepositoryId { get; set; }
     public Guid ScanRunId { get; set; }
+    
+    /// <summary>Branch that was scanned to generate this SBOM.</summary>
+    public string BranchName { get; set; } = string.Empty;
+    
     public string Format { get; set; } = "CycloneDX";
     public string Generator { get; set; } = "Syft";
     public int ComponentCount { get; set; }

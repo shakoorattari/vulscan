@@ -68,6 +68,47 @@ public sealed class ProjectService(DbContext dbContext) : IProjectService
         return project is null ? null : MapToDto(project, await GetGlobalCronAsync(ct));
     }
 
+    public async Task<ProjectConfigurationDto?> GetConfigurationAsync(Guid id, CancellationToken ct = default)
+    {
+        var project = await dbContext.Set<Project>()
+            .Include(p => p.Repositories)
+                .ThenInclude(r => r.ConfiguredBranches)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+
+        if (project is null) return null;
+
+        return new ProjectConfigurationDto
+        {
+            Id = project.Id,
+            Name = project.Name,
+            Url = project.Url,
+            IsEnabled = project.IsEnabled,
+            DefaultBranch = project.DefaultBranch,
+            Repositories = project.Repositories.Select(r => new RepositoryConfigDto
+            {
+                Id = r.Id,
+                ProjectId = r.ProjectId,
+                Name = r.Name,
+                CloneUrl = r.CloneUrl,
+                DefaultBranch = r.DefaultBranch,
+                IsEnabled = r.IsEnabled,
+                LastScannedAt = r.LastScannedAt,
+                LastScannedCommit = r.LastScannedCommit,
+                ConfiguredBranches = r.ConfiguredBranches.Select(b => new BranchConfigDto
+                {
+                    Id = b.Id,
+                    RepositoryId = b.RepositoryId,
+                    BranchName = b.BranchName,
+                    IsEnabled = b.IsEnabled,
+                    LastScannedAt = b.LastScannedAt,
+                    LastScannedCommit = b.LastScannedCommit,
+                    ScanCount = b.ScanCount,
+                    CreatedAt = b.CreatedAt,
+                }).OrderBy(b => b.BranchName).ToList(),
+            }).OrderBy(r => r.Name).ToList(),
+        };
+    }
+
     public async Task<ProjectDto> CreateAsync(CreateProjectRequest request, CancellationToken ct = default)
     {
         var (baseUrl, collection, projectName) = AzureDevOpsUrlParser.Parse(request.ProjectUrl);
@@ -136,6 +177,10 @@ public sealed class ProjectService(DbContext dbContext) : IProjectService
         project.IsEnabled = request.IsEnabled;
         project.DefaultBranch = string.IsNullOrWhiteSpace(request.DefaultBranch) ? null : request.DefaultBranch;
         project.CronExpression = NormalizeCron(request.CronExpression);
+        project.OwnerName = request.OwnerName;
+        project.OwnerEmail = request.OwnerEmail;
+        project.CcEmails = request.CcEmails;
+        project.SendEmailNotifications = request.SendEmailNotifications;
         project.UpdatedAt = DateTime.UtcNow;
 
         if (!string.IsNullOrEmpty(request.Username) && !string.IsNullOrEmpty(request.Password))
@@ -237,6 +282,10 @@ public sealed class ProjectService(DbContext dbContext) : IProjectService
             LastScanMediumCount = lastScan?.MediumCount ?? 0,
             LastScanLowCount = lastScan?.LowCount ?? 0,
             LastScanTotalVulnerabilities = lastScan?.TotalVulnerabilities ?? 0,
+            OwnerName = p.OwnerName,
+            OwnerEmail = p.OwnerEmail,
+            CcEmails = p.CcEmails,
+            SendEmailNotifications = p.SendEmailNotifications,
         };
     }
 }

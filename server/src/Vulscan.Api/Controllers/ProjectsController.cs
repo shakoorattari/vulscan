@@ -34,6 +34,15 @@ public sealed class ProjectsController(
             : Ok(ApiResponse<ProjectDto>.Ok(p));
     }
 
+    [HttpGet("{id:guid}/configuration")]
+    public async Task<ActionResult<ApiResponse<ProjectConfigurationDto>>> GetConfiguration(Guid id, CancellationToken ct)
+    {
+        var config = await projectService.GetConfigurationAsync(id, ct);
+        return config is null
+            ? NotFound(ApiResponse.Fail("Project not found."))
+            : Ok(ApiResponse<ProjectConfigurationDto>.Ok(config));
+    }
+
     [HttpPost]
     [Authorize(Roles = "Admin,SecurityAnalyst")]
     public async Task<ActionResult<ApiResponse<ProjectDto>>> Create(

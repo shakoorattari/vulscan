@@ -12,12 +12,15 @@ public class VulscanDbContext(DbContextOptions<VulscanDbContext> options) : DbCo
     public DbSet<AzureDevOpsInstance> AzureDevOpsInstances => Set<AzureDevOpsInstance>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Repository> Repositories => Set<Repository>();
+    public DbSet<RepositoryBranch> RepositoryBranches => Set<RepositoryBranch>();
     public DbSet<ScanRun> ScanRuns => Set<ScanRun>();
     public DbSet<Sbom> Sboms => Set<Sbom>();
     public DbSet<DiscoveredPackage> DiscoveredPackages => Set<DiscoveredPackage>();
     public DbSet<Vulnerability> Vulnerabilities => Set<Vulnerability>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<ScheduleSettings> ScheduleSettings => Set<ScheduleSettings>();
+    public DbSet<SmtpConfiguration> SmtpConfigurations => Set<SmtpConfiguration>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

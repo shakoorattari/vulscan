@@ -3,7 +3,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+    AddBranchRequest,
     ApiResponse,
+    BranchConfigDto,
     CreateProjectRequest,
     DashboardSummary,
     DiscoveryImportRequest,
@@ -15,22 +17,27 @@ import {
     InstanceSummary,
     PackageInventory,
     PagedResult,
+    ProjectConfigurationDto,
     ProjectDetailReport,
     ProjectDto,
     ProjectSummary,
     ProjectSummaryDto,
+    RepositoryConfigDto,
     ScanRun,
     ScheduleSettingsDto,
     SeverityTrend,
     TriggerScanRequest,
     TriggerScanResponse,
+    UpdateBranchRequest,
     UpdateInstanceRequest,
     UpdateProjectRequest,
+    UpdateRepositoryRequest,
     UpdateScheduleSettingsRequest,
     Vulnerability,
     VulnerabilityDetailReport,
     VulnerabilitySummaryItem,
 } from '../models/api.models';
+import { EmailStatusResponse, SmtpConfigurationDto, SmtpConfigurationRequest, TestEmailRequest } from '../models/smtp.models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -158,6 +165,35 @@ export class ApiService {
     return this.http.post<ApiResponse<TriggerScanResponse>>(`${this.baseUrl}/projects/${id}/scan`, {});
   }
 
+  getProjectConfiguration(id: string): Observable<ApiResponse<ProjectConfigurationDto>> {
+    return this.http.get<ApiResponse<ProjectConfigurationDto>>(`${this.baseUrl}/projects/${id}/configuration`);
+  }
+
+  // ── Repositories ────────────────────────────────────────────────────────
+  getRepositoryById(id: string): Observable<ApiResponse<RepositoryConfigDto>> {
+    return this.http.get<ApiResponse<RepositoryConfigDto>>(`${this.baseUrl}/repositories/${id}`);
+  }
+
+  updateRepository(id: string, request: UpdateRepositoryRequest): Observable<ApiResponse<RepositoryConfigDto>> {
+    return this.http.put<ApiResponse<RepositoryConfigDto>>(`${this.baseUrl}/repositories/${id}`, request);
+  }
+
+  getRepositoryBranches(id: string): Observable<ApiResponse<BranchConfigDto[]>> {
+    return this.http.get<ApiResponse<BranchConfigDto[]>>(`${this.baseUrl}/repositories/${id}/branches`);
+  }
+
+  addRepositoryBranch(repositoryId: string, request: AddBranchRequest): Observable<ApiResponse<BranchConfigDto>> {
+    return this.http.post<ApiResponse<BranchConfigDto>>(`${this.baseUrl}/repositories/${repositoryId}/branches`, request);
+  }
+
+  updateRepositoryBranch(repositoryId: string, branchId: string, request: UpdateBranchRequest): Observable<ApiResponse<BranchConfigDto>> {
+    return this.http.put<ApiResponse<BranchConfigDto>>(`${this.baseUrl}/repositories/${repositoryId}/branches/${branchId}`, request);
+  }
+
+  deleteRepositoryBranch(repositoryId: string, branchId: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/repositories/${repositoryId}/branches/${branchId}`);
+  }
+
   // ── Discovery ────────────────────────────────────────────────────────
   discoverProjects(request: DiscoveryListRequest): Observable<ApiResponse<DiscoveryListResponse>> {
     return this.http.post<ApiResponse<DiscoveryListResponse>>(`${this.baseUrl}/discovery/list`, request);
@@ -261,5 +297,42 @@ export class ApiService {
 
   downloadSbom(scanRunId: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/packages/scan/${scanRunId}/sbom/download`, { responseType: 'blob' });
+  }
+
+  // ── SMTP Configuration ─────────────────────────────────────────────
+  getActiveSmtpConfiguration(): Observable<ApiResponse<SmtpConfigurationDto>> {
+    return this.http.get<ApiResponse<SmtpConfigurationDto>>(`${this.baseUrl}/smtp/active`);
+  }
+
+  getAllSmtpConfigurations(): Observable<ApiResponse<SmtpConfigurationDto[]>> {
+    return this.http.get<ApiResponse<SmtpConfigurationDto[]>>(`${this.baseUrl}/smtp`);
+  }
+
+  getSmtpConfigurationById(id: string): Observable<ApiResponse<SmtpConfigurationDto>> {
+    return this.http.get<ApiResponse<SmtpConfigurationDto>>(`${this.baseUrl}/smtp/${id}`);
+  }
+
+  createSmtpConfiguration(request: SmtpConfigurationRequest): Observable<ApiResponse<SmtpConfigurationDto>> {
+    return this.http.post<ApiResponse<SmtpConfigurationDto>>(`${this.baseUrl}/smtp`, request);
+  }
+
+  updateSmtpConfiguration(id: string, request: SmtpConfigurationRequest): Observable<ApiResponse<SmtpConfigurationDto>> {
+    return this.http.put<ApiResponse<SmtpConfigurationDto>>(`${this.baseUrl}/smtp/${id}`, request);
+  }
+
+  deleteSmtpConfiguration(id: string): Observable<ApiResponse<object>> {
+    return this.http.delete<ApiResponse<object>>(`${this.baseUrl}/smtp/${id}`);
+  }
+
+  setActiveSmtpConfiguration(id: string): Observable<ApiResponse<SmtpConfigurationDto>> {
+    return this.http.post<ApiResponse<SmtpConfigurationDto>>(`${this.baseUrl}/smtp/${id}/set-active`, {});
+  }
+
+  testSmtpConfiguration(id: string, request: TestEmailRequest): Observable<ApiResponse<object>> {
+    return this.http.post<ApiResponse<object>>(`${this.baseUrl}/smtp/${id}/test`, request);
+  }
+
+  getEmailStatus(): Observable<ApiResponse<EmailStatusResponse>> {
+    return this.http.get<ApiResponse<EmailStatusResponse>>(`${this.baseUrl}/smtp/status`);
   }
 }

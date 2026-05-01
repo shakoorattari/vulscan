@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,6 +24,7 @@ import {
   ScanRun,
 } from '../../core/models/api.models';
 import { ApiService } from '../../core/services/api.service';
+import { ProjectEditDialogComponent } from '../../shared/components/project-edit-dialog.component';
 
 @Component({
   selector: 'app-scans',
@@ -45,6 +47,7 @@ import { ApiService } from '../../core/services/api.service';
     MatDividerModule,
     MatTabsModule,
     MatTooltipModule,
+    MatDialogModule,
   ],
   template: `
     <div class="scans-page">
@@ -307,6 +310,14 @@ import { ApiService } from '../../core/services/api.service';
                           >
                             <mat-icon>play_arrow</mat-icon>
                             Scan
+                          </button>
+                          <button
+                            mat-icon-button
+                            color="accent"
+                            (click)="editProject(p)"
+                            matTooltip="Edit project settings"
+                          >
+                            <mat-icon>edit</mat-icon>
                           </button>
                           <button
                             mat-icon-button
@@ -606,6 +617,7 @@ export class ScansComponent implements OnInit {
   constructor(
     private readonly apiService: ApiService,
     private readonly snackBar: MatSnackBar,
+    private readonly dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -734,6 +746,31 @@ export class ScansComponent implements OnInit {
       error: (err) => {
         this.snackBar.open(err.error?.message ?? 'Invalid cron expression.', 'Close', { duration: 5000 });
       },
+    });
+  }
+
+  editProject(project: ProjectDto): void {
+    const dialogRef = this.dialog.open(ProjectEditDialogComponent, {
+      width: '600px',
+      data: { project },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.apiService.updateProject(project.id, result).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.snackBar.open('Project updated successfully', 'Close', { duration: 3000 });
+              this.loadProjects();
+            } else {
+              this.snackBar.open(response.message ?? 'Failed to update project', 'Close', { duration: 5000 });
+            }
+          },
+          error: (err) => {
+            this.snackBar.open(err.error?.message ?? 'Failed to update project', 'Close', { duration: 5000 });
+          },
+        });
+      }
     });
   }
 

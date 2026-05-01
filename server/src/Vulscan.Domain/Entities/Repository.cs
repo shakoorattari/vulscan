@@ -17,6 +17,7 @@ public class Repository : BaseEntity
 
     // Navigation
     public Project Project { get; set; } = null!;
+    public ICollection<RepositoryBranch> ConfiguredBranches { get; set; } = [];
     public ICollection<Sbom> Sboms { get; set; } = [];
     public ICollection<Vulnerability> Vulnerabilities { get; set; } = [];
 }

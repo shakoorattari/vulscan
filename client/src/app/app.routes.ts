@@ -49,6 +49,11 @@ export const routes: Routes = [
           import('./features/reports/project-detail.component').then((m) => m.ProjectDetailComponent),
       },
       {
+        path: 'reports/projects/:projectId/config',
+        loadComponent: () =>
+          import('./features/reports/project-config.component').then((m) => m.ProjectConfigComponent),
+      },
+      {
         path: 'reports/vulnerabilities/:cveId',
         loadComponent: () =>
           import('./features/reports/vulnerability-detail.component').then(
@@ -59,6 +64,11 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
+        path: 'settings/smtp',
+        loadComponent: () =>
+          import('./features/settings/smtp-settings.component').then((m) => m.SmtpSettingsComponent),
       },
     ],
   },

@@ -110,6 +110,9 @@ try
             Description = "Vulnerability scanning platform API for Azure DevOps on-premises environments."
         });
 
+        // Use full type name to avoid schema ID conflicts
+        options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
+
         options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
             Name = "Authorization",
@@ -120,12 +123,11 @@ try
             Description = "Enter your JWT token"
         });
 
-        options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+        // Add the Bearer token requirement globally using the v2 API
+        options.AddSecurityRequirement(doc =>
         {
-        {
-            new OpenApiSecuritySchemeReference("Bearer", null),
-            new List<string>()
-        }
+            var schemeRef = new OpenApiSecuritySchemeReference("Bearer", doc);
+            return new OpenApiSecurityRequirement { { schemeRef, [] } };
         });
     });
 
@@ -134,6 +136,9 @@ try
     // ---------------------------------------------------------------------------
     // Middleware Pipeline
     // ---------------------------------------------------------------------------
+
+    // CORS must be before other middleware to handle preflight requests
+    app.UseCors("AllowDashboard");
 
     app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -147,7 +152,6 @@ try
         });
     }
 
-    app.UseCors("AllowDashboard");
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

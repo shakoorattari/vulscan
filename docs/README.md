@@ -31,6 +31,10 @@
 → Read [OSV_SCANNER_INTEGRATION_IMPLEMENTATION.md](./OSV_SCANNER_INTEGRATION_IMPLEMENTATION.md)  
 → Step-by-step code implementation guide with examples
 
+### **...Configure Project and Branch Scanning** (20 minutes)
+→ Read [PROJECT_CONFIGURATION_GUIDE.md](./PROJECT_CONFIGURATION_GUIDE.md)  
+→ Learn how to configure repositories and branches for targeted scanning
+
 ### **...Get Quick OSV Commands** (5 minutes)
 → Read [OSV_INTEGRATION_QUICK_REFERENCE.md](./OSV_INTEGRATION_QUICK_REFERENCE.md)  
 → TL;DR, quick commands, FAQs, installation
@@ -84,9 +88,10 @@
 | [OSV_COMPARISON_AND_RECOMMENDATIONS.md](./OSV_COMPARISON_AND_RECOMMENDATIONS.md) | Technical strategy | 15 min |
 | [OSV_SCANNER_INTEGRATION_IMPLEMENTATION.md](./OSV_SCANNER_INTEGRATION_IMPLEMENTATION.md) | Implementation guide | 30 min |
 | [CVE_INTEGRATION_GUIDE.md](./CVE_INTEGRATION_GUIDE.md) | API integration | 30 min |
+| [PROJECT_CONFIGURATION_GUIDE.md](./PROJECT_CONFIGURATION_GUIDE.md) | Project & branch configuration | 20 min |
 | [brd-v03.md](./brd-v03.md) | Architecture details | 30 min |
 
-**Total Reading Time:** ~110 minutes
+**Total Reading Time:** ~130 minutes
 
 ---
 

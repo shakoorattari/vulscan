@@ -38,6 +38,20 @@ public class Project : BaseEntity
     /// </summary>
     public string? CronExpression { get; set; }
 
+    /// <summary>Project owner name for email notifications.</summary>
+    public string? OwnerName { get; set; }
+
+    /// <summary>Project owner email address for scan result notifications.</summary>
+    public string? OwnerEmail { get; set; }
+
+    /// <summary>
+    /// Additional email addresses (comma-separated) to CC on scan notifications.
+    /// </summary>
+    public string? CcEmails { get; set; }
+
+    /// <summary>Whether to send email notifications after scan completion.</summary>
+    public bool SendEmailNotifications { get; set; } = true;
+
     public DateTime DiscoveredAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastScannedAt { get; set; }
 

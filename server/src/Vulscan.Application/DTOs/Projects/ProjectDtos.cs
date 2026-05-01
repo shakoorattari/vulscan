@@ -30,6 +30,12 @@ public record UpdateProjectRequest
     /// <summary>Optional 5-field cron (UTC). Empty/null clears the override (use global).</summary>
     public string? CronExpression { get; init; }
     public bool IsEnabled { get; init; } = true;
+    
+    // Owner information for email notifications
+    public string? OwnerName { get; init; }
+    public string? OwnerEmail { get; init; }
+    public string? CcEmails { get; init; }
+    public bool SendEmailNotifications { get; init; } = true;
 }
 
 public record ProjectDto
@@ -53,6 +59,12 @@ public record ProjectDto
     public int RepositoryCount { get; init; }
     public int TotalScans { get; init; }
     public int TotalVulnerabilities { get; init; }
+
+    // Owner information
+    public string? OwnerName { get; init; }
+    public string? OwnerEmail { get; init; }
+    public string? CcEmails { get; init; }
+    public bool SendEmailNotifications { get; init; }
 
     // Latest scan snapshot
     public Guid? LastScanId { get; init; }

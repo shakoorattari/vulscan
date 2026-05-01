@@ -1,0 +1,269 @@
+<div class="smtp-settings-page">
+  <header class="page-header">
+    <div>
+      <h1><mat-icon>email</mat-icon> SMTP Configuration</h1>
+      <p class="subtitle">Configure email server settings for vulnerability scan notifications</p>
+    </div>
+    @if (!editMode()) {
+      <button mat-raised-button color="primary" (click)="startCreate()">
+        <mat-icon>add</mat-icon> Add Configuration
+      </button>
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="centered">
+      <mat-spinner diameter="36"></mat-spinner>
+    </div>
+  } @else {
+    <!-- Configuration Form -->
+    @if (editMode()) {
+      <mat-card class="card form-card">
+        <mat-card-header>
+          <mat-card-title>{{ editingId() ? 'Edit' : 'New' }} SMTP Configuration</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="smtpForm" (ngSubmit)="saveConfiguration()">
+            <div class="form-grid">
+              <!-- Server Settings -->
+              <h3 class="section-title">Server Settings</h3>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>SMTP Host</mat-label>
+                <input matInput formControlName="host" placeholder="smtp.gmail.com" />
+                <mat-icon matSuffix matTooltip="SMTP server hostname">dns</mat-icon>
+                @if (smtpForm.get('host')?.hasError('required') && smtpForm.get('host')?.touched) {
+                  <mat-error>Host is required</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Port</mat-label>
+                <input matInput type="number" formControlName="port" />
+                <mat-hint>Common: 25, 587 (TLS), 465 (SSL)</mat-hint>
+                @if (smtpForm.get('port')?.hasError('required') && smtpForm.get('port')?.touched) {
+                  <mat-error>Port is required</mat-error>
+                }
+              </mat-form-field>
+
+              <div class="checkbox-group">
+                <mat-checkbox formControlName="useSsl">Use SSL</mat-checkbox>
+                <mat-checkbox formControlName="useStartTls">Use STARTTLS</mat-checkbox>
+              </div>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Timeout (seconds)</mat-label>
+                <input matInput type="number" formControlName="timeoutSeconds" />
+                @if (smtpForm.get('timeoutSeconds')?.hasError('min')) {
+                  <mat-error>Minimum timeout is 5 seconds</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Authentication -->
+              <h3 class="section-title">Authentication</h3>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Username (optional)</mat-label>
+                <input matInput formControlName="username" autocomplete="username" />
+                <mat-icon matSuffix>person</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Password (optional)</mat-label>
+                <input matInput type="password" formControlName="password" autocomplete="new-password" />
+                <mat-icon matSuffix>lock</mat-icon>
+                <mat-hint>Leave blank to keep existing password</mat-hint>
+              </mat-form-field>
+
+              <!-- Email Settings -->
+              <h3 class="section-title">Email Settings</h3>
+
+              <mat-form-field appearance="outline">
+                <mat-label>From Email</mat-label>
+                <input matInput type="email" formControlName="fromEmail" placeholder="noreply@example.com" />
+                <mat-icon matSuffix>email</mat-icon>
+                @if (smtpForm.get('fromEmail')?.hasError('required') && smtpForm.get('fromEmail')?.touched) {
+                  <mat-error>From email is required</mat-error>
+                }
+                @if (smtpForm.get('fromEmail')?.hasError('email')) {
+                  <mat-error>Invalid email format</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>From Name</mat-label>
+                <input matInput formControlName="fromName" placeholder="Vulscan Scanner" />
+                <mat-icon matSuffix>badge</mat-icon>
+                @if (smtpForm.get('fromName')?.hasError('required') && smtpForm.get('fromName')?.touched) {
+                  <mat-error>From name is required</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Reply-To Email (optional)</mat-label>
+                <input matInput type="email" formControlName="replyToEmail" />
+                <mat-icon matSuffix>reply</mat-icon>
+                @if (smtpForm.get('replyToEmail')?.hasError('email')) {
+                  <mat-error>Invalid email format</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-slide-toggle formControlName="isEnabled" class="toggle">
+                Email notifications enabled
+              </mat-slide-toggle>
+            </div>
+
+            <div class="form-actions">
+              <button mat-button type="button" (click)="cancelEdit()" [disabled]="saving()">Cancel</button>
+              <button mat-raised-button color="primary" type="submit" [disabled]="saving() || smtpForm.invalid">
+                <mat-icon>{{ saving() ? 'hourglass_empty' : 'save' }}</mat-icon>
+                {{ saving() ? 'Saving...' : 'Save Configuration' }}
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- Configurations List -->
+    @if (!editMode() && configurations().length > 0) {
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Existing Configurations</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <table mat-table [dataSource]="configurations()" class="configurations-table">
+            <!-- Host Column -->
+            <ng-container matColumnDef="host">
+              <th mat-header-cell *matHeaderCellDef>Host</th>
+              <td mat-cell *matCellDef="let config">{{ config.host }}</td>
+            </ng-container>
+
+            <!-- Port Column -->
+            <ng-container matColumnDef="port">
+              <th mat-header-cell *matHeaderCellDef>Port</th>
+              <td mat-cell *matCellDef="let config">{{ config.port }}</td>
+            </ng-container>
+
+            <!-- From Email Column -->
+            <ng-container matColumnDef="fromEmail">
+              <th mat-header-cell *matHeaderCellDef>From Email</th>
+              <td mat-cell *matCellDef="let config">{{ config.fromEmail }}</td>
+            </ng-container>
+
+            <!-- Active Column -->
+            <ng-container matColumnDef="isActive">
+              <th mat-header-cell *matHeaderCellDef>Active</th>
+              <td mat-cell *matCellDef="let config">
+                @if (config.isActive) {
+                  <mat-icon class="status-icon active" matTooltip="Active configuration">check_circle</mat-icon>
+                } @else {
+                  <mat-icon class="status-icon inactive" matTooltip="Inactive">radio_button_unchecked</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Enabled Column -->
+            <ng-container matColumnDef="isEnabled">
+              <th mat-header-cell *matHeaderCellDef>Enabled</th>
+              <td mat-cell *matCellDef="let config">
+                @if (config.isEnabled) {
+                  <mat-icon class="status-icon enabled" matTooltip="Email notifications enabled">notifications_active</mat-icon>
+                } @else {
+                  <mat-icon class="status-icon disabled" matTooltip="Email notifications disabled">notifications_off</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Last Tested Column -->
+            <ng-container matColumnDef="lastTested">
+              <th mat-header-cell *matHeaderCellDef>Last Tested</th>
+              <td mat-cell *matCellDef="let config">
+                {{ config.lastTestedAt ? (config.lastTestedAt | date: 'short') : 'Never' }}
+              </td>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let config">
+                <button mat-icon-button [matTooltip]="'Edit'" (click)="startEdit(config)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                @if (!config.isActive) {
+                  <button mat-icon-button [matTooltip]="'Set as Active'" (click)="setActive(config.id)" color="primary">
+                    <mat-icon>star</mat-icon>
+                  </button>
+                }
+                <button mat-icon-button [matTooltip]="'Test Configuration'" (click)="testConfiguration(config)" color="accent">
+                  <mat-icon>send</mat-icon>
+                </button>
+                <button mat-icon-button [matTooltip]="'Delete'" (click)="deleteConfiguration(config.id)" color="warn">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Test Email Section -->
+      <mat-card class="card test-email-card">
+        <mat-card-header>
+          <mat-card-title><mat-icon>send</mat-icon> Send Test Email</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (activeConfig()) {
+            <form [formGroup]="testEmailForm" (ngSubmit)="testConfiguration(activeConfig()!)">
+              <div class="test-email-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>To Email</mat-label>
+                  <input matInput type="email" formControlName="toEmail" />
+                  @if (testEmailForm.get('toEmail')?.hasError('required') && testEmailForm.get('toEmail')?.touched) {
+                    <mat-error>Email is required</mat-error>
+                  }
+                  @if (testEmailForm.get('toEmail')?.hasError('email')) {
+                    <mat-error>Invalid email format</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Subject</mat-label>
+                  <input matInput formControlName="subject" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Message Body</mat-label>
+                  <textarea matInput formControlName="body" rows="3"></textarea>
+                </mat-form-field>
+
+                <button mat-raised-button color="accent" type="submit" [disabled]="testing() || testEmailForm.invalid">
+                  <mat-icon>{{ testing() ? 'hourglass_empty' : 'send' }}</mat-icon>
+                  {{ testing() ? 'Sending...' : 'Send Test Email' }}
+                </button>
+              </div>
+            </form>
+          } @else {
+            <p class="no-config-message">No active SMTP configuration. Please create and activate a configuration first.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @if (!editMode() && configurations().length === 0) {
+      <mat-card class="card empty-state">
+        <mat-card-content>
+          <mat-icon class="empty-icon">email</mat-icon>
+          <h2>No SMTP Configurations</h2>
+          <p>Create your first SMTP configuration to enable email notifications.</p>
+          <button mat-raised-button color="primary" (click)="startCreate()">
+            <mat-icon>add</mat-icon> Add Configuration
+          </button>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

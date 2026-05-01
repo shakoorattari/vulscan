@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IVulnerabilityService, VulnerabilityService>();
         services.AddScoped<IInstanceService, InstanceService>();
         services.AddScoped<IProjectService, ProjectService>();
+        services.AddScoped<IRepositoryService, RepositoryService>();
         services.AddScoped<IDiscoveryService, DiscoveryService>();
         services.AddScoped<IScanProcessor, ScanProcessor>();
         services.AddScoped<IReportService, ReportService>();

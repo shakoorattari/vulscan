@@ -24,6 +24,8 @@ A comprehensive vulnerability scanning and management platform for Azure DevOps 
 ### ✅ Core Capabilities
 
 - **Automated Repository Discovery** — Scans Azure DevOps instances to discover all projects and repositories
+- **Project Configuration** — Configure specific repositories and branches for targeted scanning
+- **Branch Management** — Scan multiple branches per repository (main, develop, release, etc.)
 - **SBOM Generation** — Creates CycloneDX-compliant Software Bill of Materials for each repository
 - **Multi-Ecosystem Support** — Supports npm (Node.js) and NuGet (.NET) package ecosystems
 - **Vulnerability Detection** — Identifies known vulnerabilities in discovered packages
@@ -34,6 +36,7 @@ A comprehensive vulnerability scanning and management platform for Azure DevOps 
 ### 📊 Dashboard & Analytics
 
 - Executive dashboard with KPI cards and vulnerability breakdowns
+- Project configuration page for repository and branch management
 - Scan history with status tracking
 - Ecosystem breakdown statistics
 - Severity trend analysis across scans
