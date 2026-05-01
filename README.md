@@ -1,6 +1,23 @@
 # 🛡️ Vulscan — Vulnerability Scanning Platform
 
+> **Enterprise vulnerability management for on-premises Azure DevOps Server**  
+> Powered by Google OSV.dev • Built for compliance & security teams
+
 A comprehensive vulnerability scanning and management platform for Azure DevOps repositories. Vulscan automatically discovers repositories, generates Software Bill of Materials (SBOM), and identifies security vulnerabilities across your codebase.
+
+## 🎯 Why Vulscan?
+
+**What makes us different from OSV Scanner / Snyk / GitHub Advanced Security:**
+
+- ✅ **Azure DevOps Native** — First-class support for on-premises Azure DevOps Server (not GitHub-first)
+- ✅ **On-Premises First** — Deploy behind your firewall, data never leaves your network
+- ✅ **Enterprise Dashboard** — Web UI for security teams, compliance officers, and management
+- ✅ **Historical Tracking** — Track vulnerability trends over time for compliance (SOC 2, ISO 27001)
+- ✅ **Multi-Tenant** — Manage multiple Azure DevOps instances, projects, and repositories centrally
+- ✅ **Affordable** — $10k-50k/year vs. $100k+ for enterprise solutions
+- ✅ **Powered by OSV.dev** — Google's free, comprehensive vulnerability database (100k+ CVEs)
+
+**👉 [Read our Strategic Positioning](docs/STRATEGIC_POSITIONING.md) to understand our market position**
 
 ## 🌟 Features
 
@@ -199,10 +216,27 @@ export const environment = {
 
 ## 📝 Documentation
 
-Additional documentation is available in the `/docs` directory:
+### 🎯 Strategic & Planning Documents
 
-- `brd-v03.md` — Business Requirements Document
-- `work-items/` — Detailed progress tracking for each feature area
+**For Leadership & Stakeholders:**
+- [**Strategic Positioning**](docs/STRATEGIC_POSITIONING.md) — Why Vulscan exists, market position, competitive advantages, business model
+- [**Project Plan 2026**](docs/PROJECT_PLAN_2026.md) — Complete roadmap, milestones, budget, team structure, success metrics
+- [**Quick Start Guide**](docs/QUICK_START_GUIDE.md) — TL;DR for stakeholders, current sprint, next actions
+
+**For Technical Team:**
+- [**OSV.dev Comparison & Recommendations**](docs/OSV_COMPARISON_AND_RECOMMENDATIONS.md) — Full analysis of Google OSV.dev vs. Vulscan, integration strategy
+- [**OSV Integration Quick Reference**](docs/OSV_INTEGRATION_QUICK_REFERENCE.md) — Quick commands, FAQs, installation guide
+- [**OSV Scanner Implementation Guide**](docs/OSV_SCANNER_INTEGRATION_IMPLEMENTATION.md) — Step-by-step code implementation for container & license scanning
+- [**CVE Integration Guide**](docs/CVE_INTEGRATION_GUIDE.md) — Vulnerability data sources, API integration patterns
+
+### 📋 Product Documentation
+
+- [**Business Requirements Document v3**](docs/brd-v03.md) — Complete product specification
+- [**Work Items Tracking**](docs/work-items/) — Detailed progress tracking for each feature area
+
+### 🔐 Security
+
+- [**Security Policy**](SECURITY.md) — Critical security setup requirements
 
 ## 🛠️ Technology Stack
 
@@ -226,20 +260,40 @@ Additional documentation is available in the `/docs` directory:
 
 ## 🚧 Roadmap
 
-### In Progress
+**👉 [See Full 2026 Project Plan](docs/PROJECT_PLAN_2026.md) for detailed timeline, milestones, and budget**
 
-- Enhanced vulnerability database integration (NVD, OSV)
-- HTML report generation
-- Email notifications via SMTP
-- Microsoft Teams webhook integration
+### Q2 2026 (Current) — Beta Release
 
-### Planned
+- [x] OSV.dev API integration complete
+- [x] Core scanning features (npm, NuGet)
+- [ ] Container image scanning (OSV Scanner CLI)
+- [ ] License compliance scanning
+- [ ] User management UI & RBAC
+- [ ] **Community Edition launch (July 31)**
 
-- Trivy/Grype integration for advanced scanning
-- Scheduled scans with cron expressions
-- Multi-tenancy support
-- Vulnerability remediation tracking
-- RBAC enhancements
+### Q3 2026 — v1.0 Production
+
+- [ ] SQL Server support (enterprise database)
+- [ ] High availability deployment
+- [ ] 5 pilot customers onboarded
+- [ ] First paying customer ($10k ARR)
+- [ ] Monitoring & alerting (Prometheus/Grafana)
+
+### Q4 2026 — Professional Edition
+
+- [ ] Multi-instance management
+- [ ] SSO/SAML authentication
+- [ ] Advanced reporting (PDF exports)
+- [ ] Sales & marketing launch
+- [ ] **$100k ARR, 10 paying customers**
+
+### Q1 2027 — Enterprise Edition
+
+- [ ] Air-gapped deployment support
+- [ ] Advanced RBAC (custom roles)
+- [ ] 24/7 support tier
+- [ ] Professional services
+- [ ] **$200k ARR, 20 customers**
 
 ## 📄 License
 
