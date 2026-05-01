@@ -13,14 +13,15 @@ public class ScanRunConfiguration : IEntityTypeConfiguration<ScanRun>
         builder.HasKey(s => s.Id);
         builder.HasIndex(s => s.Status);
         builder.HasIndex(s => s.StartedAt);
+        builder.HasIndex(s => s.ProjectId);
 
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
-        // ErrorLog uses default string mapping (TEXT for SQLite, nvarchar(max) for SQL Server)
+        builder.Property(s => s.ProjectId).IsRequired();
 
-        builder.HasOne(s => s.Instance)
-            .WithMany(i => i.ScanRuns)
-            .HasForeignKey(s => s.InstanceId)
-            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne(s => s.Project)
+            .WithMany(p => p.ScanRuns)
+            .HasForeignKey(s => s.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(s => s.TriggeredBy)
             .WithMany(u => u.TriggeredScans)
@@ -51,7 +52,7 @@ public class SbomConfiguration : IEntityTypeConfiguration<Sbom>
         builder.HasOne(s => s.ScanRun)
             .WithMany(sr => sr.Sboms)
             .HasForeignKey(s => s.ScanRunId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }
 

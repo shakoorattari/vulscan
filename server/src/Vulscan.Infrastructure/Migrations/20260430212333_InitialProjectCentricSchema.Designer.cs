@@ -12,8 +12,8 @@ using Vulscan.Infrastructure.Data;
 namespace Vulscan.Infrastructure.Migrations
 {
     [DbContext(typeof(VulscanDbContext))]
-    [Migration("20260430144336_InitialGuidSchema")]
-    partial class InitialGuidSchema
+    [Migration("20260430212333_InitialProjectCentricSchema")]
+    partial class InitialProjectCentricSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -209,11 +209,27 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CredentialReference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DefaultBranch")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime>("DiscoveredAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LastScannedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -222,6 +238,11 @@ namespace Vulscan.Infrastructure.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.HasKey("Id");
 
@@ -360,14 +381,14 @@ namespace Vulscan.Infrastructure.Migrations
                     b.Property<int>("HighCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("InstanceId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("LowCount")
                         .HasColumnType("int");
 
                     b.Property<int>("MediumCount")
                         .HasColumnType("int");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("ReposFailed")
                         .HasColumnType("int");
@@ -394,7 +415,7 @@ namespace Vulscan.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("InstanceId");
+                    b.HasIndex("ProjectId");
 
                     b.HasIndex("StartedAt");
 
@@ -627,7 +648,7 @@ namespace Vulscan.Infrastructure.Migrations
                     b.HasOne("Vulscan.Domain.Entities.ScanRun", "ScanRun")
                         .WithMany("Sboms")
                         .HasForeignKey("ScanRunId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Repository");
@@ -637,17 +658,18 @@ namespace Vulscan.Infrastructure.Migrations
 
             modelBuilder.Entity("Vulscan.Domain.Entities.ScanRun", b =>
                 {
-                    b.HasOne("Vulscan.Domain.Entities.AzureDevOpsInstance", "Instance")
+                    b.HasOne("Vulscan.Domain.Entities.Project", "Project")
                         .WithMany("ScanRuns")
-                        .HasForeignKey("InstanceId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Vulscan.Domain.Entities.User", "TriggeredBy")
                         .WithMany("TriggeredScans")
                         .HasForeignKey("TriggeredByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Instance");
+                    b.Navigation("Project");
 
                     b.Navigation("TriggeredBy");
                 });
@@ -681,13 +703,13 @@ namespace Vulscan.Infrastructure.Migrations
             modelBuilder.Entity("Vulscan.Domain.Entities.AzureDevOpsInstance", b =>
                 {
                     b.Navigation("Projects");
-
-                    b.Navigation("ScanRuns");
                 });
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Project", b =>
                 {
                     b.Navigation("Repositories");
+
+                    b.Navigation("ScanRuns");
                 });
 
             modelBuilder.Entity("Vulscan.Domain.Entities.Repository", b =>

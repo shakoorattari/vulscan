@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Vulscan.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialGuidSchema : Migration
+    public partial class InitialProjectCentricSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -63,7 +63,12 @@ namespace Vulscan.Infrastructure.Migrations
                     InstanceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     AzureProjectId = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Url = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    CredentialReference = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    DefaultBranch = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IsEnabled = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     DiscoveredAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastScannedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -108,48 +113,6 @@ namespace Vulscan.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ScanRuns",
-                schema: "vulscan",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    InstanceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    TriggeredByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DurationSeconds = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    ReposScanned = table.Column<int>(type: "int", nullable: false),
-                    ReposFailed = table.Column<int>(type: "int", nullable: false),
-                    TotalVulnerabilities = table.Column<int>(type: "int", nullable: false),
-                    CriticalCount = table.Column<int>(type: "int", nullable: false),
-                    HighCount = table.Column<int>(type: "int", nullable: false),
-                    MediumCount = table.Column<int>(type: "int", nullable: false),
-                    LowCount = table.Column<int>(type: "int", nullable: false),
-                    ErrorLog = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ScanRuns", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ScanRuns_AzureDevOpsInstances_InstanceId",
-                        column: x => x.InstanceId,
-                        principalSchema: "vulscan",
-                        principalTable: "AzureDevOpsInstances",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_ScanRuns_Users_TriggeredByUserId",
-                        column: x => x.TriggeredByUserId,
-                        principalSchema: "vulscan",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Repositories",
                 schema: "vulscan",
                 columns: table => new
@@ -175,6 +138,48 @@ namespace Vulscan.Infrastructure.Migrations
                         principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ScanRuns",
+                schema: "vulscan",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TriggeredByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DurationSeconds = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ReposScanned = table.Column<int>(type: "int", nullable: false),
+                    ReposFailed = table.Column<int>(type: "int", nullable: false),
+                    TotalVulnerabilities = table.Column<int>(type: "int", nullable: false),
+                    CriticalCount = table.Column<int>(type: "int", nullable: false),
+                    HighCount = table.Column<int>(type: "int", nullable: false),
+                    MediumCount = table.Column<int>(type: "int", nullable: false),
+                    LowCount = table.Column<int>(type: "int", nullable: false),
+                    ErrorLog = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ScanRuns", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ScanRuns_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalSchema: "vulscan",
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ScanRuns_Users_TriggeredByUserId",
+                        column: x => x.TriggeredByUserId,
+                        principalSchema: "vulscan",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -210,8 +215,7 @@ namespace Vulscan.Infrastructure.Migrations
                         column: x => x.ScanRunId,
                         principalSchema: "vulscan",
                         principalTable: "ScanRuns",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -382,10 +386,10 @@ namespace Vulscan.Infrastructure.Migrations
                 column: "ScanRunId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ScanRuns_InstanceId",
+                name: "IX_ScanRuns_ProjectId",
                 schema: "vulscan",
                 table: "ScanRuns",
-                column: "InstanceId");
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ScanRuns_StartedAt",

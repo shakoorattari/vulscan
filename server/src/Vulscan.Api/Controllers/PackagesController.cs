@@ -432,7 +432,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     public async Task<IActionResult> GetScanDetails(Guid scanRunId)
     {
         var scanRun = await db.ScanRuns
-            .Include(s => s.Instance)
+            .Include(s => s.Project)
+                .ThenInclude(p => p.Instance)
             .FirstOrDefaultAsync(s => s.Id == scanRunId);
 
         if (scanRun == null)
@@ -470,7 +471,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
                 scanRun.MediumCount,
                 scanRun.LowCount,
                 scanRun.ErrorLog,
-                instanceName = scanRun.Instance?.Name
+                projectName = scanRun.Project?.Name,
+                instanceName = scanRun.Project?.Instance?.Name
             },
             summary = new
             {

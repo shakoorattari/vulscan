@@ -108,7 +108,7 @@ import { ApiService } from '../../core/services/api.service';
         <section class="cover">
           <div class="cover-meta">
             <span class="eyebrow">Vulnerability Scan Report</span>
-            <h1>{{ s.instanceName ?? 'Untitled Project' }}</h1>
+            <h1>{{ s.projectName ?? 'Untitled Project' }}</h1>
             <p class="subtitle">
               Scan <strong>#{{ s.id }}</strong> · executed
               {{ s.startedAt | date : 'medium' }}
@@ -531,11 +531,7 @@ import { ApiService } from '../../core/services/api.service';
       flex-shrink: 0;
     }
 
-    .duration,
-    .trigger {
-      font-size: 12px;
-      opacity: 0.85;
-    }
+    .duration, .trigger { font-size: 12px; opacity: 0.85; }
 
     /* Summary cards -------------------------------------------- */
     .summary-grid {
@@ -554,12 +550,6 @@ import { ApiService } from '../../core/services/api.service';
       gap: 14px;
       border: 1px solid var(--neutral-200);
       box-shadow: var(--shadow-xs);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .summary-card:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
     }
 
     .sc-icon {
@@ -578,30 +568,12 @@ import { ApiService } from '../../core/services/api.service';
       height: 22px;
     }
 
-    .summary-card.critical .sc-icon {
-      background: var(--sev-critical-bg);
-      color: var(--sev-critical);
-    }
-    .summary-card.high .sc-icon {
-      background: var(--sev-high-bg);
-      color: var(--sev-high);
-    }
-    .summary-card.medium .sc-icon {
-      background: var(--sev-medium-bg);
-      color: var(--sev-medium);
-    }
-    .summary-card.low .sc-icon {
-      background: var(--sev-low-bg);
-      color: var(--sev-low);
-    }
-    .summary-card.total .sc-icon {
-      background: var(--brand-teal-50);
-      color: var(--brand-teal);
-    }
-    .summary-card.repos .sc-icon {
-      background: var(--brand-navy-50);
-      color: var(--brand-navy);
-    }
+    .summary-card.critical .sc-icon { background: var(--sev-critical-bg); color: var(--sev-critical); }
+    .summary-card.high .sc-icon { background: var(--sev-high-bg); color: var(--sev-high); }
+    .summary-card.medium .sc-icon { background: var(--sev-medium-bg); color: var(--sev-medium); }
+    .summary-card.low .sc-icon { background: var(--sev-low-bg); color: var(--sev-low); }
+    .summary-card.total .sc-icon { background: var(--brand-teal-50); color: var(--brand-teal); }
+    .summary-card.repos .sc-icon { background: var(--brand-navy-50); color: var(--brand-navy); }
 
     .sc-body {
       display: flex;
@@ -635,18 +607,10 @@ import { ApiService } from '../../core/services/api.service';
       background: var(--neutral-200);
     }
 
-    .bar-segment.critical {
-      background: var(--sev-critical);
-    }
-    .bar-segment.high {
-      background: var(--sev-high);
-    }
-    .bar-segment.medium {
-      background: var(--sev-medium);
-    }
-    .bar-segment.low {
-      background: var(--sev-low);
-    }
+    .bar-segment.critical, .dot.critical, .sev-chip.critical { background: var(--sev-critical); }
+    .bar-segment.high, .dot.high, .sev-chip.high { background: var(--sev-high); }
+    .bar-segment.medium, .dot.medium, .sev-chip.medium { background: var(--sev-medium); }
+    .bar-segment.low, .dot.low, .sev-chip.low { background: var(--sev-low); }
 
     .bar-legend {
       display: flex;
@@ -663,23 +627,7 @@ import { ApiService } from '../../core/services/api.service';
       color: var(--neutral-700);
     }
 
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-    .dot.critical {
-      background: var(--sev-critical);
-    }
-    .dot.high {
-      background: var(--sev-high);
-    }
-    .dot.medium {
-      background: var(--sev-medium);
-    }
-    .dot.low {
-      background: var(--sev-low);
-    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
 
     .all-clear {
       display: flex;
@@ -697,15 +645,8 @@ import { ApiService } from '../../core/services/api.service';
       height: 32px;
     }
 
-    .all-clear strong {
-      display: block;
-      font-size: 14px;
-    }
-
-    .all-clear span {
-      font-size: 12px;
-      opacity: 0.8;
-    }
+    .all-clear strong { display: block; font-size: 14px; }
+    .all-clear span { font-size: 12px; opacity: 0.8; }
 
     /* Projects summary (collapsible) -------------------------- */
     .projects-summary {
@@ -789,7 +730,6 @@ import { ApiService } from '../../core/services/api.service';
       border-radius: var(--radius-md);
       text-align: left;
       cursor: pointer;
-      transition: all 0.12s ease;
     }
 
     .project-tile:hover {
@@ -851,22 +791,6 @@ import { ApiService } from '../../core/services/api.service';
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 0.03em;
-    }
-
-    .sev-chip.critical {
-      background: var(--sev-critical);
-      color: #fff;
-    }
-    .sev-chip.high {
-      background: var(--sev-high);
-      color: #fff;
-    }
-    .sev-chip.medium {
-      background: var(--sev-medium);
-      color: #fff;
-    }
-    .sev-chip.low {
-      background: var(--sev-low);
       color: #fff;
     }
 
@@ -934,28 +858,10 @@ import { ApiService } from '../../core/services/api.service';
       font-size: 12px;
     }
 
-    .cve-link {
-      color: var(--brand-teal-700);
-      text-decoration: none;
-      font-weight: 600;
-      font-family: 'SF Mono', Menlo, monospace;
-      font-size: 12px;
-    }
-
-    .cve-link:hover {
-      text-decoration: underline;
-    }
-
-    .cve-text {
-      font-family: 'SF Mono', Menlo, monospace;
-      font-size: 12px;
-    }
-
-    .fix-version {
-      font-family: 'SF Mono', Menlo, monospace;
-      font-size: 12px;
-      color: var(--brand-teal-700);
-    }
+    .cve-link, .cve-text, .fix-version { font-family: 'SF Mono', Menlo, monospace; font-size: 12px; }
+    .cve-link { color: var(--brand-teal-700); text-decoration: none; font-weight: 600; }
+    .cve-link:hover { text-decoration: underline; }
+    .fix-version { color: var(--brand-teal-700); }
 
     .sev-pill {
       display: inline-block;
@@ -967,22 +873,10 @@ import { ApiService } from '../../core/services/api.service';
       text-transform: capitalize;
     }
 
-    .sev-pill.critical {
-      background: var(--sev-critical-bg);
-      color: var(--sev-critical);
-    }
-    .sev-pill.high {
-      background: var(--sev-high-bg);
-      color: var(--sev-high);
-    }
-    .sev-pill.medium {
-      background: var(--sev-medium-bg);
-      color: var(--sev-medium);
-    }
-    .sev-pill.low {
-      background: var(--sev-low-bg);
-      color: var(--sev-low);
-    }
+    .sev-pill.critical { background: var(--sev-critical-bg); color: var(--sev-critical); }
+    .sev-pill.high { background: var(--sev-high-bg); color: var(--sev-high); }
+    .sev-pill.medium { background: var(--sev-medium-bg); color: var(--sev-medium); }
+    .sev-pill.low { background: var(--sev-low-bg); color: var(--sev-low); }
 
     .status-badge {
       display: inline-flex;
@@ -1002,31 +896,11 @@ import { ApiService } from '../../core/services/api.service';
       background: currentColor;
     }
 
-    .status-badge.completed,
-    .status-badge.open {
-      background: var(--status-success-bg);
-      color: var(--status-success);
-    }
-    .status-badge.running,
-    .status-badge.queued {
-      background: var(--status-info-bg);
-      color: var(--status-info);
-    }
-    .status-badge.failed,
-    .status-badge.unresolved {
-      background: var(--status-error-bg);
-      color: var(--status-error);
-    }
-    .status-badge.resolved,
-    .status-badge.fixed {
-      background: var(--brand-teal-50);
-      color: var(--brand-teal-700);
-    }
-    .status-badge.suppressed,
-    .status-badge.acknowledged {
-      background: var(--status-warn-bg);
-      color: var(--status-warn);
-    }
+    .status-badge.completed, .status-badge.open { background: var(--status-success-bg); color: var(--status-success); }
+    .status-badge.running, .status-badge.queued { background: var(--status-info-bg); color: var(--status-info); }
+    .status-badge.failed, .status-badge.unresolved { background: var(--status-error-bg); color: var(--status-error); }
+    .status-badge.resolved, .status-badge.fixed { background: var(--brand-teal-50); color: var(--brand-teal-700); }
+    .status-badge.suppressed, .status-badge.acknowledged { background: var(--status-warn-bg); color: var(--status-warn); }
 
     /* Misc ----------------------------------------------------- */
     .loading-container {
@@ -1152,7 +1026,7 @@ export class ScanReportComponent implements OnInit {
   readonly columns = ['severity', 'cve', 'package', 'fix', 'cvss', 'repo', 'status'];
 
   scanId = '';
-  pendingInstanceId: string | null = null;
+  pendingProjectId: string | null = null;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -1170,15 +1044,14 @@ export class ScanReportComponent implements OnInit {
       return;
     }
 
-    // Auto-apply filters from query params (e.g., navigated from scans tab with filtered instance)
+    // Auto-apply filters from query params (e.g., navigated from scans tab with filtered project)
     const qp = this.route.snapshot.queryParamMap;
     const pid = qp.get('projectId');
     const repo = qp.get('repository');
-    const iid = qp.get('instanceId');
-    if (pid) this.selectedProjectId.set(pid);
     if (repo) this.selectedRepository.set(repo);
-    // If instanceId provided, we'll load and auto-select its project after scan loads
-    this.pendingInstanceId = iid ?? null;
+    // If projectId provided, we'll load and auto-select its project after scan loads
+    this.pendingProjectId = pid ?? null;
+    if (pid) this.selectedProjectId.set(pid);
 
     this.load();
   }
@@ -1203,10 +1076,10 @@ export class ScanReportComponent implements OnInit {
         this.loadingVulns.set(false);
         if (scan.success && scan.data) {
           this.scan.set(scan.data);
-          // If instanceId was passed, auto-select its project
-          if (this.pendingInstanceId && projects.success && projects.data) {
+          // If projectId was passed, auto-select its project
+          if (this.pendingProjectId && projects.success && projects.data) {
             const matchingProject = projects.data.find(
-              (p) => p.projectId === this.pendingInstanceId,
+              (p) => p.projectId === this.pendingProjectId,
             );
             if (matchingProject) {
               this.selectedProjectId.set(matchingProject.projectId);
@@ -1238,9 +1111,9 @@ export class ScanReportComponent implements OnInit {
 
   rescan(): void {
     const s = this.scan();
-    if (!s || !s.instanceId || this.rescanning()) return;
+    if (!s || !s.projectId || this.rescanning()) return;
     this.rescanning.set(true);
-    this.api.triggerScan({ instanceId: s.instanceId }).subscribe({
+    this.api.triggerProjectScan(s.projectId).subscribe({
       next: (res) => {
         this.rescanning.set(false);
         const newId = res.data?.scanRunId;
@@ -1268,7 +1141,7 @@ export class ScanReportComponent implements OnInit {
     this.api.exportVulnerabilitiesCsv(undefined, this.scanId).subscribe({
       next: (blob) => {
         this.downloading.set(false);
-        const filename = `scan-${s.id}-${(s.instanceName ?? 'report').replace(/\s+/g, '_')}.csv`;
+        const filename = `scan-${s.id}-${(s.projectName ?? 'report').replace(/\s+/g, '_')}.csv`;
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

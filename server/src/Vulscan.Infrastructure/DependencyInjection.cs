@@ -84,6 +84,9 @@ public static class DependencyInjection
         // Background worker for processing scans
         services.AddHostedService<ScanBackgroundWorker>();
 
+        // Cron-based scheduler that enqueues scans (global + per-project overrides)
+        services.AddHostedService<ProjectScanScheduler>();
+
         return services;
     }
 }

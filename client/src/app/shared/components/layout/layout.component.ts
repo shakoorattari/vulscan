@@ -47,6 +47,11 @@ import { AuthService } from '../../../core/auth/auth.service';
             <mat-icon>radar</mat-icon>
             <span class="nav-label">Scans</span>
           </a>
+          <a class="nav-item" routerLink="/discovery" routerLinkActive="active">
+            <span class="nav-indicator"></span>
+            <mat-icon>travel_explore</mat-icon>
+            <span class="nav-label">Discovery</span>
+          </a>
           <a class="nav-item" routerLink="/packages" routerLinkActive="active">
             <span class="nav-indicator"></span>
             <mat-icon>inventory_2</mat-icon>
@@ -57,6 +62,13 @@ import { AuthService } from '../../../core/auth/auth.service';
             <mat-icon>insights</mat-icon>
             <span class="nav-label">Reports</span>
           </a>
+          @if (auth.isAdmin()) {
+            <a class="nav-item" routerLink="/settings" routerLinkActive="active">
+              <span class="nav-indicator"></span>
+              <mat-icon>settings</mat-icon>
+              <span class="nav-label">Settings</span>
+            </a>
+          }
         </nav>
 
         <div class="sidebar-footer">

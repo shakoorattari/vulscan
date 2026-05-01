@@ -4,11 +4,14 @@ using Vulscan.Domain.Enums;
 namespace Vulscan.Domain.Entities;
 
 /// <summary>
-/// Represents a single scan execution run against an Azure DevOps instance.
+/// Represents a single scan execution run for a specific Project.
+/// Scans are always scoped to a single project.
 /// </summary>
 public class ScanRun : BaseEntity
 {
-    public Guid? InstanceId { get; set; }
+    /// <summary>Required — every scan targets exactly one project.</summary>
+    public Guid ProjectId { get; set; }
+
     public Guid? TriggeredByUserId { get; set; }
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
@@ -24,7 +27,7 @@ public class ScanRun : BaseEntity
     public string? ErrorLog { get; set; }
 
     // Navigation
-    public AzureDevOpsInstance? Instance { get; set; }
+    public Project Project { get; set; } = null!;
     public User? TriggeredBy { get; set; }
     public ICollection<Sbom> Sboms { get; set; } = [];
     public ICollection<Vulnerability> Vulnerabilities { get; set; } = [];

@@ -5,8 +5,8 @@ namespace Vulscan.Application.DTOs.Scans;
 public sealed record ScanRunDto
 {
     public Guid Id { get; init; }
-    public Guid? InstanceId { get; init; }
-    public string? InstanceName { get; init; }
+    public Guid ProjectId { get; init; }
+    public string? ProjectName { get; init; }
     public DateTime StartedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
     public int DurationSeconds { get; init; }
@@ -25,7 +25,7 @@ public sealed record ScanRunDto
 public sealed record TriggerScanRequest
 {
     [Required]
-    public Guid InstanceId { get; init; }
+    public Guid ProjectId { get; init; }
 }
 
 public sealed record TriggerScanResponse

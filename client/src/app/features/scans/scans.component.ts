@@ -17,9 +17,9 @@ import { MatTabGroup, MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import {
-  CreateInstanceRequest,
-  InstanceDto,
+  CreateProjectRequest,
   PagedResult,
+  ProjectDto,
   ScanRun,
 } from '../../core/models/api.models';
 import { ApiService } from '../../core/services/api.service';
@@ -48,7 +48,6 @@ import { ApiService } from '../../core/services/api.service';
   ],
   template: `
     <div class="scans-page">
-      <!-- Hero header -->
       <header class="page-hero">
         <div class="hero-text">
           <h1>Scan Management</h1>
@@ -57,7 +56,11 @@ import { ApiService } from '../../core/services/api.service';
           </p>
         </div>
         <div class="hero-actions">
-          <button mat-flat-button color="primary" (click)="showAddInstance.set(true)">
+          <a mat-stroked-button routerLink="/discovery" matTooltip="Discover & bulk-import projects">
+            <mat-icon>travel_explore</mat-icon>
+            Discover
+          </a>
+          <button mat-flat-button color="primary" (click)="showAddProject.set(true)">
             <mat-icon>add</mat-icon>
             Add Project
           </button>
@@ -65,24 +68,24 @@ import { ApiService } from '../../core/services/api.service';
       </header>
 
       <mat-tab-group #tabGroup [(selectedIndex)]="selectedTab" animationDuration="200ms">
-        <!-- Projects Tab -->
         <mat-tab label="Projects">
           <div class="tab-content">
-            @if (showAddInstance()) {
+            @if (showAddProject()) {
               <mat-card class="form-card elevated">
                 <mat-card-header>
                   <mat-card-title>Add Azure DevOps Project</mat-card-title>
                   <mat-card-subtitle>
-                    Connect a new repository source for SBOM and CVE scanning
+                    Connect a project for SBOM and CVE scanning. The server (instance) is created
+                    automatically from the URL.
                   </mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
                   <div class="form-grid">
                     <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>Project Name</mat-label>
+                      <mat-label>Display Name</mat-label>
                       <input
                         matInput
-                        [(ngModel)]="newInstance.name"
+                        [(ngModel)]="newProject.name"
                         placeholder="e.g., TransLynk Production"
                       />
                       <mat-hint>A friendly name for this project</mat-hint>
@@ -92,7 +95,7 @@ import { ApiService } from '../../core/services/api.service';
                       <mat-label>Azure DevOps Project URL</mat-label>
                       <input
                         matInput
-                        [(ngModel)]="newInstance.projectUrl"
+                        [(ngModel)]="newProject.projectUrl"
                         placeholder="https://devops.ishj.ae/SDD/TransLynk"
                       />
                       <mat-hint>Full URL to your Azure DevOps project</mat-hint>
@@ -102,7 +105,7 @@ import { ApiService } from '../../core/services/api.service';
                       <mat-label>Username</mat-label>
                       <input
                         matInput
-                        [(ngModel)]="newInstance.username"
+                        [(ngModel)]="newProject.username"
                         placeholder="user@domain.com"
                       />
                     </mat-form-field>
@@ -112,16 +115,22 @@ import { ApiService } from '../../core/services/api.service';
                       <input
                         matInput
                         type="password"
-                        [(ngModel)]="newInstance.password"
+                        [(ngModel)]="newProject.password"
                         placeholder="Enter password or PAT"
                       />
                       <mat-hint>Personal Access Token recommended</mat-hint>
                     </mat-form-field>
 
                     <mat-form-field appearance="outline">
-                      <mat-label>Default Branch</mat-label>
-                      <input matInput [(ngModel)]="newInstance.branch" placeholder="main" />
-                      <mat-hint>Branch to scan (default: main)</mat-hint>
+                      <mat-label>Default Branch (optional)</mat-label>
+                      <input matInput [(ngModel)]="newProject.defaultBranch" placeholder="main" />
+                      <mat-hint>Leave blank to use each repo's default branch</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Schedule — Cron (optional)</mat-label>
+                      <input matInput [(ngModel)]="newProject.cronExpression" placeholder="0 2 * * *" />
+                      <mat-hint>5-field UTC cron. Empty = use global schedule.</mat-hint>
                     </mat-form-field>
                   </div>
 
@@ -129,10 +138,10 @@ import { ApiService } from '../../core/services/api.service';
                     <button
                       mat-flat-button
                       color="primary"
-                      (click)="addInstance()"
-                      [disabled]="addingInstance()"
+                      (click)="addProject()"
+                      [disabled]="addingProject()"
                     >
-                      @if (addingInstance()) {
+                      @if (addingProject()) {
                         <mat-spinner diameter="18"></mat-spinner>
                       } @else {
                         <ng-container>
@@ -141,7 +150,7 @@ import { ApiService } from '../../core/services/api.service';
                         </ng-container>
                       }
                     </button>
-                    <button mat-stroked-button (click)="cancelAddInstance()">Cancel</button>
+                    <button mat-stroked-button (click)="cancelAddProject()">Cancel</button>
                   </div>
                 </mat-card-content>
               </mat-card>
@@ -151,33 +160,31 @@ import { ApiService } from '../../core/services/api.service';
               <mat-card-header>
                 <mat-card-title>Configured Projects</mat-card-title>
                 <mat-card-subtitle>
-                  {{ instances().length }}
-                  {{ instances().length === 1 ? 'project' : 'projects' }} configured
+                  {{ projects().length }}
+                  {{ projects().length === 1 ? 'project' : 'projects' }} configured
                 </mat-card-subtitle>
                 <span class="spacer"></span>
-                <button mat-icon-button (click)="loadInstances()" matTooltip="Refresh">
+                <button mat-icon-button (click)="loadProjects()" matTooltip="Refresh">
                   <mat-icon>refresh</mat-icon>
                 </button>
               </mat-card-header>
               <mat-card-content>
-                @if (loadingInstances()) {
+                @if (loadingProjects()) {
                   <div class="loading-container">
                     <mat-spinner diameter="36"></mat-spinner>
                   </div>
-                } @else if (instances().length > 0) {
+                } @else if (projects().length > 0) {
                   <div class="table-wrapper">
-                    <table mat-table [dataSource]="instances()" class="modern-table">
+                    <table mat-table [dataSource]="projects()" class="modern-table">
                       <ng-container matColumnDef="name">
                         <th mat-header-cell *matHeaderCellDef>Project</th>
-                        <td mat-cell *matCellDef="let inst">
+                        <td mat-cell *matCellDef="let p">
                           <div class="project-cell">
-                            <div class="project-avatar">
-                              {{ initials(inst.name) }}
-                            </div>
+                            <div class="project-avatar">{{ initials(p.name) }}</div>
                             <div class="project-info">
-                              <strong>{{ inst.name }}</strong>
-                              <small class="text-muted">{{ inst.projectName }}</small>
-                              <small class="url-text">{{ inst.url }}/{{ inst.collection }}</small>
+                              <strong>{{ p.name }}</strong>
+                              <small class="text-muted">{{ p.azureProjectId }}</small>
+                              <small class="url-text">{{ p.url }}</small>
                             </div>
                           </div>
                         </td>
@@ -185,39 +192,39 @@ import { ApiService } from '../../core/services/api.service';
 
                       <ng-container matColumnDef="lastScan">
                         <th mat-header-cell *matHeaderCellDef>Last Scan</th>
-                        <td mat-cell *matCellDef="let inst">
-                          @if (inst.lastScannedAt) {
+                        <td mat-cell *matCellDef="let p">
+                          @if (p.lastScannedAt) {
                             <div class="last-scan-cell">
                               <div class="last-scan-meta">
-                                <span class="status-badge" [class]="(inst.lastScanStatus ?? '').toLowerCase()">
-                                  {{ inst.lastScanStatus ?? 'Unknown' }}
+                                <span class="status-badge" [class]="(p.lastScanStatus ?? '').toLowerCase()">
+                                  {{ p.lastScanStatus ?? 'Unknown' }}
                                 </span>
-                                <span class="text-muted timestamp" [matTooltip]="inst.lastScannedAt | date : 'medium'">
-                                  {{ inst.lastScannedAt | date : 'MMM d, y, h:mm a' }}
+                                <span class="text-muted timestamp" [matTooltip]="p.lastScannedAt | date : 'medium'">
+                                  {{ p.lastScannedAt | date : 'MMM d, y, h:mm a' }}
                                 </span>
                               </div>
                               <div class="vuln-summary">
-                                @if (inst.lastScanCriticalCount > 0) {
+                                @if (p.lastScanCriticalCount > 0) {
                                   <span class="severity-count critical" matTooltip="Critical">
-                                    {{ inst.lastScanCriticalCount }}C
+                                    {{ p.lastScanCriticalCount }}C
                                   </span>
                                 }
-                                @if (inst.lastScanHighCount > 0) {
+                                @if (p.lastScanHighCount > 0) {
                                   <span class="severity-count high" matTooltip="High">
-                                    {{ inst.lastScanHighCount }}H
+                                    {{ p.lastScanHighCount }}H
                                   </span>
                                 }
-                                @if (inst.lastScanMediumCount > 0) {
+                                @if (p.lastScanMediumCount > 0) {
                                   <span class="severity-count medium" matTooltip="Medium">
-                                    {{ inst.lastScanMediumCount }}M
+                                    {{ p.lastScanMediumCount }}M
                                   </span>
                                 }
-                                @if (inst.lastScanLowCount > 0) {
+                                @if (p.lastScanLowCount > 0) {
                                   <span class="severity-count low" matTooltip="Low">
-                                    {{ inst.lastScanLowCount }}L
+                                    {{ p.lastScanLowCount }}L
                                   </span>
                                 }
-                                @if (inst.lastScanTotalVulnerabilities === 0) {
+                                @if (p.lastScanTotalVulnerabilities === 0) {
                                   <span class="no-vulns">
                                     <mat-icon class="check-icon">check_circle</mat-icon>
                                     Clean
@@ -233,41 +240,59 @@ import { ApiService } from '../../core/services/api.service';
 
                       <ng-container matColumnDef="totals">
                         <th mat-header-cell *matHeaderCellDef>Totals</th>
-                        <td mat-cell *matCellDef="let inst">
+                        <td mat-cell *matCellDef="let p">
                           <div class="totals-cell">
                             <span class="stat-pill">
-                              <mat-icon>history</mat-icon>
-                              {{ inst.totalScans }} scans
+                              <mat-icon>folder</mat-icon>
+                              {{ p.repositoryCount }} repos
                             </span>
                             <span class="stat-pill">
-                              <mat-icon>bug_report</mat-icon>
-                              {{ inst.totalVulnerabilities }} vulns
+                              <mat-icon>history</mat-icon>
+                              {{ p.totalScans }} scans
                             </span>
                           </div>
                         </td>
                       </ng-container>
 
+                      <ng-container matColumnDef="schedule">
+                        <th mat-header-cell *matHeaderCellDef>Schedule</th>
+                        <td mat-cell *matCellDef="let p">
+                          <button
+                            mat-stroked-button
+                            class="schedule-chip"
+                            (click)="editProjectCron(p)"
+                            [matTooltip]="p.cronExpression ? 'Project override (click to edit)' : 'Using global schedule (click to override)'"
+                          >
+                            <mat-icon>schedule</mat-icon>
+                            <span>{{ p.effectiveCron || '—' }}</span>
+                            @if (p.cronExpression) {
+                              <span class="override-dot" aria-hidden="true"></span>
+                            }
+                          </button>
+                        </td>
+                      </ng-container>
+
                       <ng-container matColumnDef="status">
                         <th mat-header-cell *matHeaderCellDef>Status</th>
-                        <td mat-cell *matCellDef="let inst">
+                        <td mat-cell *matCellDef="let p">
                           <span
                             class="status-badge"
-                            [class.enabled]="inst.isEnabled"
-                            [class.disabled]="!inst.isEnabled"
+                            [class.enabled]="p.isEnabled"
+                            [class.disabled]="!p.isEnabled"
                           >
                             <span class="status-dot"></span>
-                            {{ inst.isEnabled ? 'Active' : 'Disabled' }}
+                            {{ p.isEnabled ? 'Active' : 'Disabled' }}
                           </span>
                         </td>
                       </ng-container>
 
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef class="actions-col">Actions</th>
-                        <td mat-cell *matCellDef="let inst" class="actions-col">
+                        <td mat-cell *matCellDef="let p" class="actions-col">
                           <button
                             mat-stroked-button
                             color="primary"
-                            (click)="viewScansForInstance(inst)"
+                            (click)="viewScansForProject(p)"
                             matTooltip="View scan history for this project"
                           >
                             <mat-icon>visibility</mat-icon>
@@ -276,8 +301,8 @@ import { ApiService } from '../../core/services/api.service';
                           <button
                             mat-flat-button
                             color="primary"
-                            (click)="triggerScanForInstance(inst.id)"
-                            [disabled]="triggering()"
+                            (click)="triggerScanForProject(p.id)"
+                            [disabled]="triggering() || !p.isEnabled"
                             matTooltip="Start vulnerability scan"
                           >
                             <mat-icon>play_arrow</mat-icon>
@@ -286,7 +311,7 @@ import { ApiService } from '../../core/services/api.service';
                           <button
                             mat-icon-button
                             color="warn"
-                            (click)="deleteInstance(inst.id)"
+                            (click)="deleteProject(p.id)"
                             matTooltip="Delete project"
                           >
                             <mat-icon>delete</mat-icon>
@@ -294,8 +319,8 @@ import { ApiService } from '../../core/services/api.service';
                         </td>
                       </ng-container>
 
-                      <tr mat-header-row *matHeaderRowDef="instanceColumns"></tr>
-                      <tr mat-row *matRowDef="let row; columns: instanceColumns" class="data-row"></tr>
+                      <tr mat-header-row *matHeaderRowDef="projectColumns"></tr>
+                      <tr mat-row *matRowDef="let row; columns: projectColumns" class="data-row"></tr>
                     </table>
                   </div>
                 } @else {
@@ -305,7 +330,7 @@ import { ApiService } from '../../core/services/api.service';
                     </div>
                     <h3>No projects configured yet</h3>
                     <p>Add an Azure DevOps project to start scanning for vulnerabilities.</p>
-                    <button mat-flat-button color="primary" (click)="showAddInstance.set(true)">
+                    <button mat-flat-button color="primary" (click)="showAddProject.set(true)">
                       <mat-icon>add</mat-icon>
                       Add Your First Project
                     </button>
@@ -316,22 +341,21 @@ import { ApiService } from '../../core/services/api.service';
           </div>
         </mat-tab>
 
-        <!-- Scan History Tab -->
         <mat-tab label="Scan History">
           <div class="tab-content">
             <mat-card class="elevated">
               <mat-card-header>
                 <mat-card-title>Scan History</mat-card-title>
                 <mat-card-subtitle>
-                  @if (filteredInstance(); as fi) {
-                    Filtered by <strong>{{ fi.name }}</strong>
+                  @if (filteredProject(); as fp) {
+                    Filtered by <strong>{{ fp.name }}</strong>
                   } @else {
                     All projects
                   }
                 </mat-card-subtitle>
                 <span class="spacer"></span>
-                @if (filteredInstance()) {
-                  <button mat-stroked-button (click)="clearInstanceFilter()" class="filter-clear">
+                @if (filteredProject()) {
+                  <button mat-stroked-button (click)="clearProjectFilter()" class="filter-clear">
                     <mat-icon>filter_alt_off</mat-icon>
                     Clear filter
                   </button>
@@ -355,10 +379,10 @@ import { ApiService } from '../../core/services/api.service';
                         </td>
                       </ng-container>
 
-                      <ng-container matColumnDef="instance">
+                      <ng-container matColumnDef="project">
                         <th mat-header-cell *matHeaderCellDef>Project</th>
                         <td mat-cell *matCellDef="let scan">
-                          {{ scan.instanceName ?? 'N/A' }}
+                          {{ scan.projectName ?? 'N/A' }}
                         </td>
                       </ng-container>
 
@@ -426,7 +450,7 @@ import { ApiService } from '../../core/services/api.service';
                             mat-stroked-button
                             color="primary"
                             [routerLink]="['/scans', scan.id, 'report']"
-                            [queryParams]="filteredInstance() ? { instanceId: filteredInstance()!.id } : {}"
+                            [queryParams]="filteredProject() ? { projectId: filteredProject()!.id } : {}"
                             matTooltip="View detailed report with PDF/CSV export"
                           >
                             <mat-icon>description</mat-icon>
@@ -456,7 +480,7 @@ import { ApiService } from '../../core/services/api.service';
                     </div>
                     <h3>No scan history</h3>
                     <p>
-                      @if (filteredInstance()) {
+                      @if (filteredProject()) {
                         No scans yet for this project. Trigger one from the Projects tab.
                       } @else {
                         Trigger a scan from the Projects tab to see results here.
@@ -472,390 +496,73 @@ import { ApiService } from '../../core/services/api.service';
     </div>
   `,
   styles: `
-    :host {
-      display: block;
-      --gradient-primary: var(--gradient-brand);
-      --shadow-card: var(--shadow-sm);
-      --shadow-card-hover: var(--shadow-md);
-      --radius-lg: 16px;
-    }
-
-    .scans-page {
-      padding: 8px 4px 32px;
-    }
-
-    /* Hero header ----------------------------------------------------- */
-    .page-hero {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      padding: 24px 28px;
-      margin-bottom: 24px;
-      background: var(--gradient-primary);
-      color: #fff;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-card);
-    }
-
-    .hero-text h1 {
-      margin: 0 0 4px;
-      font-size: 26px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .hero-subtitle {
-      margin: 0;
-      opacity: 0.9;
-      font-size: 14px;
-    }
-
-    .hero-actions button {
-      background: rgba(255, 255, 255, 0.95);
-      color: var(--brand-teal-700);
-    }
-
-    /* Cards & layout -------------------------------------------------- */
-    .tab-content {
-      padding: 20px 0 0;
-    }
-
-    .elevated {
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-card);
-      transition: box-shadow 0.2s ease;
-    }
-
-    .elevated:hover {
-      box-shadow: var(--shadow-card-hover);
-    }
-
-    .form-card {
-      margin-bottom: 20px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-      padding-top: 8px;
-    }
-
-    .form-grid .full-width {
-      grid-column: 1 / -1;
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .spacer {
-      flex: 1;
-    }
-
-    .full-width {
-      width: 100%;
-    }
-
-    .filter-clear {
-      margin-right: 4px;
-    }
-
-    /* Loading & empty states ----------------------------------------- */
-    .loading-container {
-      display: flex;
-      justify-content: center;
-      padding: 48px;
-    }
-
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding: 56px 24px;
-    }
-
-    .empty-illustration {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: var(--brand-teal-50);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
-    .empty-illustration mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: var(--brand-teal);
-    }
-
-    .empty-state h3 {
-      margin: 0 0 8px;
-      font-weight: 500;
-    }
-
-    .empty-state p {
-      margin: 0 0 20px;
-      color: rgba(0, 0, 0, 0.6);
-      max-width: 360px;
-    }
-
-    /* Table ----------------------------------------------------------- */
-    .table-wrapper {
-      overflow-x: auto;
-      margin: 4px -8px;
-      padding: 0 8px;
-    }
-
-    .modern-table {
-      width: 100%;
-      background: transparent;
-    }
-
-    .modern-table th.mat-mdc-header-cell {
-      font-weight: 600;
-      color: rgba(0, 0, 0, 0.7);
-      letter-spacing: 0.02em;
-      font-size: 12px;
-      text-transform: uppercase;
-      background: rgba(0, 0, 0, 0.02);
-    }
-
-    .modern-table td.mat-mdc-cell,
-    .modern-table th.mat-mdc-header-cell {
-      padding: 14px 16px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    }
-
-    .data-row {
-      transition: background 0.15s ease;
-    }
-
-    .data-row:hover {
-      background: var(--brand-teal-50);
-    }
-
-    .actions-col {
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .actions-col button {
-      margin-left: 6px;
-    }
-
-    /* Project cell --------------------------------------------------- */
-    .project-cell {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .project-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: var(--gradient-primary);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .project-info {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.3;
-    }
-
-    .project-info strong {
-      font-size: 14px;
-    }
-
-    .project-info small {
-      font-size: 12px;
-    }
-
-    .text-muted {
-      color: rgba(0, 0, 0, 0.55);
-    }
-
-    .url-text {
-      font-family: 'SF Mono', Menlo, Consolas, monospace;
-      font-size: 11px;
-      color: rgba(0, 0, 0, 0.45);
-    }
-
-    /* Last-scan cell ------------------------------------------------- */
-    .last-scan-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .last-scan-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .timestamp {
-      font-size: 12px;
-    }
-
-    /* Totals ---------------------------------------------------------- */
-    .totals-cell {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .stat-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      background: rgba(0, 0, 0, 0.04);
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-      color: rgba(0, 0, 0, 0.75);
-    }
-
-    .stat-pill mat-icon {
-      font-size: 14px;
-      width: 14px;
-      height: 14px;
-    }
-
-    /* Status badges -------------------------------------------------- */
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: capitalize;
-      line-height: 1;
-    }
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-      opacity: 0.85;
-    }
-
-    .status-badge.enabled,
-    .status-badge.completed {
-      background: var(--status-success-bg);
-      color: var(--status-success);
-    }
-    .status-badge.disabled,
-    .status-badge.failed {
-      background: var(--status-error-bg);
-      color: var(--status-error);
-    }
-    .status-badge.running {
-      background: var(--status-info-bg);
-      color: var(--status-info);
-    }
-    .status-badge.queued,
-    .status-badge.pending {
-      background: var(--status-warn-bg);
-      color: var(--status-warn);
-    }
-
-    /* Severity counts ------------------------------------------------ */
-    .vuln-summary {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .severity-count {
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
-    .severity-count.critical {
-      background: var(--sev-critical-bg);
-      color: var(--sev-critical);
-    }
-    .severity-count.high {
-      background: var(--sev-high-bg);
-      color: var(--sev-high);
-    }
-    .severity-count.medium {
-      background: var(--sev-medium-bg);
-      color: var(--sev-medium);
-    }
-    .severity-count.low {
-      background: var(--sev-low-bg);
-      color: var(--sev-low);
-    }
-
-    .no-vulns {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      color: var(--brand-teal-700);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .check-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-    }
-
-    .scan-id {
-      font-family: 'SF Mono', Menlo, Consolas, monospace;
-      font-size: 12px;
-      padding: 2px 8px;
-      background: rgba(0, 0, 0, 0.04);
-      border-radius: 6px;
-      color: rgba(0, 0, 0, 0.7);
-    }
-
-    /* Responsive ------------------------------------------------------ */
+    :host { display: block; --gradient-primary: var(--gradient-brand); --shadow-card: var(--shadow-sm); --shadow-card-hover: var(--shadow-md); --radius-lg: 16px; }
+    .scans-page { padding: 8px 4px 32px; }
+    .page-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 28px; margin-bottom: 24px; background: var(--gradient-primary); color: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+    .hero-text h1 { margin: 0 0 4px; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .hero-subtitle { margin: 0; opacity: 0.9; font-size: 14px; }
+    .hero-actions { display: flex; gap: 10px; }
+    .hero-actions button, .hero-actions a { background: rgba(255, 255, 255, 0.95); color: var(--brand-teal-700); }
+    .tab-content { padding: 20px 0 0; }
+    .elevated { border-radius: var(--radius-lg); box-shadow: var(--shadow-card); transition: box-shadow 0.2s ease; }
+    .elevated:hover { box-shadow: var(--shadow-card-hover); }
+    .form-card { margin-bottom: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding-top: 8px; }
+    .form-grid .full-width { grid-column: 1 / -1; }
+    .form-actions { display: flex; gap: 12px; margin-top: 16px; }
+    .spacer { flex: 1; }
+    .full-width { width: 100%; }
+    .filter-clear { margin-right: 4px; }
+    .loading-container { display: flex; justify-content: center; padding: 48px; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px 24px; }
+    .empty-illustration { width: 80px; height: 80px; border-radius: 50%; background: var(--brand-teal-50); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+    .empty-illustration mat-icon { font-size: 40px; width: 40px; height: 40px; color: var(--brand-teal); }
+    .empty-state h3 { margin: 0 0 8px; font-weight: 500; }
+    .empty-state p { margin: 0 0 20px; color: rgba(0, 0, 0, 0.6); max-width: 360px; }
+    .table-wrapper { overflow-x: auto; margin: 4px -8px; padding: 0 8px; }
+    .modern-table { width: 100%; background: transparent; }
+    .modern-table th.mat-mdc-header-cell { font-weight: 600; color: rgba(0, 0, 0, 0.7); letter-spacing: 0.02em; font-size: 12px; text-transform: uppercase; background: rgba(0, 0, 0, 0.02); }
+    .modern-table td.mat-mdc-cell, .modern-table th.mat-mdc-header-cell { padding: 14px 16px; border-bottom: 1px solid rgba(0, 0, 0, 0.06); }
+    .data-row { transition: background 0.15s ease; }
+    .data-row:hover { background: var(--brand-teal-50); }
+    .actions-col { text-align: right; white-space: nowrap; }
+    .actions-col button, .actions-col a { margin-left: 6px; }
+    .project-cell { display: flex; align-items: center; gap: 12px; }
+    .project-avatar { width: 40px; height: 40px; border-radius: 10px; background: var(--gradient-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+    .project-info { display: flex; flex-direction: column; line-height: 1.3; }
+    .project-info strong { font-size: 14px; }
+    .project-info small { font-size: 12px; }
+    .text-muted { color: rgba(0, 0, 0, 0.55); }
+    .url-text { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 11px; color: rgba(0, 0, 0, 0.45); }
+    .last-scan-cell { display: flex; flex-direction: column; gap: 6px; }
+    .last-scan-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .timestamp { font-size: 12px; }
+    .totals-cell { display: flex; gap: 8px; flex-wrap: wrap; }
+    .stat-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: rgba(0, 0, 0, 0.04); border-radius: 999px; font-size: 12px; font-weight: 500; color: rgba(0, 0, 0, 0.75); }
+    .stat-pill mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .schedule-chip { font-family: 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 1; padding: 2px 10px !important; min-width: 0 !important; position: relative; }
+    .schedule-chip mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 4px; vertical-align: middle; }
+    .override-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--brand-teal); margin-left: 6px; vertical-align: middle; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: capitalize; line-height: 1; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+    .status-badge.enabled, .status-badge.completed { background: var(--status-success-bg); color: var(--status-success); }
+    .status-badge.disabled, .status-badge.failed { background: var(--status-error-bg); color: var(--status-error); }
+    .status-badge.running { background: var(--status-info-bg); color: var(--status-info); }
+    .status-badge.queued, .status-badge.pending { background: var(--status-warn-bg); color: var(--status-warn); }
+    .vuln-summary { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .severity-count { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+    .severity-count.critical { background: var(--sev-critical-bg); color: var(--sev-critical); }
+    .severity-count.high { background: var(--sev-high-bg); color: var(--sev-high); }
+    .severity-count.medium { background: var(--sev-medium-bg); color: var(--sev-medium); }
+    .severity-count.low { background: var(--sev-low-bg); color: var(--sev-low); }
+    .no-vulns { display: inline-flex; align-items: center; gap: 4px; color: var(--brand-teal-700); font-size: 12px; font-weight: 600; }
+    .check-icon { font-size: 16px; width: 16px; height: 16px; }
+    .scan-id { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; padding: 2px 8px; background: rgba(0, 0, 0, 0.04); border-radius: 6px; color: rgba(0, 0, 0, 0.7); }
     @media (max-width: 768px) {
-      .page-hero {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 20px;
-      }
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-      .actions-col {
-        text-align: left;
-      }
-      .actions-col button {
-        margin-left: 0;
-        margin-right: 6px;
-        margin-bottom: 4px;
-      }
+      .page-hero { flex-direction: column; align-items: flex-start; padding: 20px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .actions-col { text-align: left; }
+      .actions-col button, .actions-col a { margin-left: 0; margin-right: 6px; margin-bottom: 4px; }
     }
   `,
 })
@@ -863,30 +570,31 @@ export class ScansComponent implements OnInit {
   @ViewChild('tabGroup') tabGroup?: MatTabGroup;
 
   readonly loading = signal(true);
-  readonly loadingInstances = signal(true);
+  readonly loadingProjects = signal(true);
   readonly triggering = signal(false);
-  readonly addingInstance = signal(false);
-  readonly showAddInstance = signal(false);
+  readonly addingProject = signal(false);
+  readonly showAddProject = signal(false);
   readonly scans = signal<PagedResult<ScanRun> | null>(null);
-  readonly instances = signal<InstanceDto[]>([]);
-  readonly filteredInstance = signal<InstanceDto | null>(null);
+  readonly projects = signal<ProjectDto[]>([]);
+  readonly filteredProject = signal<ProjectDto | null>(null);
 
-  newInstance: CreateInstanceRequest = {
+  newProject: CreateProjectRequest = {
     name: '',
     projectUrl: '',
     username: '',
     password: '',
-    branch: 'main',
+    defaultBranch: '',
+    cronExpression: '',
   };
 
   selectedTab = 0;
   currentPage = 1;
   pageSize = 25;
 
-  readonly instanceColumns = ['name', 'lastScan', 'totals', 'status', 'actions'];
+  readonly projectColumns = ['name', 'lastScan', 'totals', 'schedule', 'status', 'actions'];
   readonly scanColumns = [
     'id',
-    'instance',
+    'project',
     'startedAt',
     'duration',
     'status',
@@ -901,7 +609,7 @@ export class ScansComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadInstances();
+    this.loadProjects();
     this.loadScans();
   }
 
@@ -912,17 +620,17 @@ export class ScansComponent implements OnInit {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  loadInstances(): void {
-    this.loadingInstances.set(true);
-    this.apiService.getInstances().subscribe({
+  loadProjects(): void {
+    this.loadingProjects.set(true);
+    this.apiService.getProjects().subscribe({
       next: (response) => {
-        this.loadingInstances.set(false);
+        this.loadingProjects.set(false);
         if (response.success && response.data) {
-          this.instances.set(response.data);
+          this.projects.set(response.data);
         }
       },
       error: () => {
-        this.loadingInstances.set(false);
+        this.loadingProjects.set(false);
         this.snackBar.open('Failed to load projects.', 'Close', { duration: 5000 });
       },
     });
@@ -930,8 +638,8 @@ export class ScansComponent implements OnInit {
 
   loadScans(): void {
     this.loading.set(true);
-    const instanceId = this.filteredInstance()?.id;
-    this.apiService.getScanHistory(this.currentPage, this.pageSize, instanceId).subscribe({
+    const projectId = this.filteredProject()?.id;
+    this.apiService.getScanHistory(this.currentPage, this.pageSize, projectId).subscribe({
       next: (response) => {
         this.loading.set(false);
         if (response.success && response.data) {
@@ -945,112 +653,125 @@ export class ScansComponent implements OnInit {
     });
   }
 
-  viewScansForInstance(instance: InstanceDto): void {
-    this.filteredInstance.set(instance);
+  viewScansForProject(project: ProjectDto): void {
+    this.filteredProject.set(project);
     this.currentPage = 1;
     this.selectedTab = 1;
     this.loadScans();
   }
 
-  clearInstanceFilter(): void {
-    this.filteredInstance.set(null);
+  clearProjectFilter(): void {
+    this.filteredProject.set(null);
     this.currentPage = 1;
     this.loadScans();
   }
 
-  addInstance(): void {
+  addProject(): void {
     if (
-      !this.newInstance.name ||
-      !this.newInstance.projectUrl ||
-      !this.newInstance.username ||
-      !this.newInstance.password
+      !this.newProject.name ||
+      !this.newProject.projectUrl ||
+      !this.newProject.username ||
+      !this.newProject.password
     ) {
       this.snackBar.open('Please fill in all required fields.', 'Close', { duration: 5000 });
       return;
     }
 
-    this.addingInstance.set(true);
-    this.apiService.createInstance(this.newInstance).subscribe({
+    const payload: CreateProjectRequest = {
+      ...this.newProject,
+      defaultBranch: this.newProject.defaultBranch?.trim() || undefined,
+      cronExpression: this.newProject.cronExpression?.trim() || undefined,
+    };
+
+    this.addingProject.set(true);
+    this.apiService.createProject(payload).subscribe({
       next: (response) => {
-        this.addingInstance.set(false);
+        this.addingProject.set(false);
         if (response.success && response.data) {
           this.snackBar.open('Project added successfully!', 'Close', { duration: 5000 });
-          this.cancelAddInstance();
-          this.loadInstances();
+          this.cancelAddProject();
+          this.loadProjects();
         } else {
-          this.snackBar.open(response.message ?? 'Failed to add project.', 'Close', {
-            duration: 5000,
-          });
+          this.snackBar.open(response.message ?? 'Failed to add project.', 'Close', { duration: 5000 });
         }
       },
       error: (err) => {
-        this.addingInstance.set(false);
-        this.snackBar.open(err.error?.message ?? 'Failed to add project.', 'Close', {
-          duration: 5000,
-        });
+        this.addingProject.set(false);
+        this.snackBar.open(err.error?.message ?? 'Failed to add project.', 'Close', { duration: 5000 });
       },
     });
   }
 
-  cancelAddInstance(): void {
-    this.showAddInstance.set(false);
-    this.newInstance = {
-      name: '',
-      projectUrl: '',
-      username: '',
-      password: '',
-      branch: 'main',
-    };
+  cancelAddProject(): void {
+    this.showAddProject.set(false);
+    this.newProject = { name: '', projectUrl: '', username: '', password: '', defaultBranch: '', cronExpression: '' };
   }
 
-  triggerScanForInstance(instanceId: string): void {
+  editProjectCron(project: ProjectDto): void {
+    const current = project.cronExpression ?? '';
+    const input = window.prompt(
+      `Cron schedule for "${project.name}"\n\nLeave blank to use the global schedule.\nFormat: minute hour day month weekday (e.g. 0 2 * * *)`,
+      current,
+    );
+    if (input === null) return;
+    const trimmed = input.trim();
+    const cronExpression = trimmed.length === 0 ? undefined : trimmed;
+    this.apiService
+      .updateProject(project.id, {
+        name: project.name,
+        isEnabled: project.isEnabled,
+        cronExpression,
+      })
+      .subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.snackBar.open('Schedule updated.', 'Close', { duration: 4000 });
+          this.loadProjects();
+        } else {
+          this.snackBar.open(response.message ?? 'Failed to update schedule.', 'Close', { duration: 5000 });
+        }
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message ?? 'Invalid cron expression.', 'Close', { duration: 5000 });
+      },
+    });
+  }
+
+  triggerScanForProject(projectId: string): void {
     this.triggering.set(true);
-    this.apiService.triggerScan({ instanceId }).subscribe({
+    this.apiService.triggerProjectScan(projectId).subscribe({
       next: (response) => {
         this.triggering.set(false);
         if (response.success && response.data) {
           this.snackBar.open(response.data.message, 'Close', { duration: 5000 });
           this.loadScans();
-          this.loadInstances();
+          this.loadProjects();
         } else {
-          this.snackBar.open(response.message ?? 'Failed to trigger scan.', 'Close', {
-            duration: 5000,
-          });
+          this.snackBar.open(response.message ?? 'Failed to trigger scan.', 'Close', { duration: 5000 });
         }
       },
       error: (err) => {
         this.triggering.set(false);
-        this.snackBar.open(err.error?.message ?? 'Failed to trigger scan.', 'Close', {
-          duration: 5000,
-        });
+        this.snackBar.open(err.error?.message ?? 'Failed to trigger scan.', 'Close', { duration: 5000 });
       },
     });
   }
 
-  deleteInstance(id: string): void {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return;
-    }
+  deleteProject(id: string): void {
+    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
 
-    this.apiService.deleteInstance(id).subscribe({
+    this.apiService.deleteProject(id).subscribe({
       next: (response) => {
         if (response.success) {
           this.snackBar.open('Project deleted.', 'Close', { duration: 5000 });
-          // Clear filter if the filtered instance was deleted
-          if (this.filteredInstance()?.id === id) {
-            this.clearInstanceFilter();
-          }
-          this.loadInstances();
+          if (this.filteredProject()?.id === id) this.clearProjectFilter();
+          this.loadProjects();
         } else {
-          this.snackBar.open(response.message ?? 'Failed to delete project.', 'Close', {
-            duration: 5000,
-          });
+          this.snackBar.open(response.message ?? 'Failed to delete project.', 'Close', { duration: 5000 });
         }
       },
       error: (err) => {
-        this.snackBar.open(err.error?.message ?? 'Failed to delete project.', 'Close', {
-          duration: 5000,
-        });
+        this.snackBar.open(err.error?.message ?? 'Failed to delete project.', 'Close', { duration: 5000 });
       },
     });
   }

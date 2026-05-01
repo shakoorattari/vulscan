@@ -9,8 +9,9 @@ using Vulscan.Domain.Enums;
 namespace Vulscan.Application.Services;
 
 /// <summary>
-/// Processes scan runs - connects to Azure DevOps, fetches repos, scans dependencies.
-/// Stores all discovered packages and generates SBOMs.
+/// Project-scoped scan processor. Loads the target Project, picks credentials
+/// (project-specific or inherited from instance), enumerates only that project's
+/// repositories, scans dependency files and persists SBOMs + vulnerabilities.
 /// </summary>
 public sealed class ScanProcessor(
     DbContext dbContext,
@@ -18,7 +19,6 @@ public sealed class ScanProcessor(
     IDependencyScanner dependencyScanner,
     ILogger<ScanProcessor> logger) : IScanProcessor
 {
-    // Dependency file patterns to scan
     private static readonly string[] DependencyFilePatterns =
     [
         "package.json", "package-lock.json",
@@ -37,248 +37,171 @@ public sealed class ScanProcessor(
         logger.LogInformation("═══════════════════════════════════════════════════════════════");
 
         var scanRun = await dbContext.Set<ScanRun>()
-            .Include(s => s.Instance)
-                .ThenInclude(i => i!.Projects)
+            .Include(s => s.Project)
+                .ThenInclude(p => p.Instance)
             .FirstOrDefaultAsync(s => s.Id == scanRunId, ct);
 
         if (scanRun == null)
         {
-            logger.LogError("❌ Scan run #{ScanRunId} not found in database", scanRunId);
+            logger.LogError("❌ Scan run #{ScanRunId} not found", scanRunId);
             return;
         }
 
-        if (scanRun.Instance == null)
+        if (scanRun.Project == null || scanRun.Project.Instance == null)
         {
-            await FailScanAsync(scanRun, "Azure DevOps instance not configured", ct);
+            await FailScanAsync(scanRun, "Project or parent instance missing", ct);
             return;
         }
 
-        logger.LogInformation("📋 Instance: {Name}", scanRun.Instance.Name);
-        logger.LogInformation("📋 URL: {Url}/{Collection}", scanRun.Instance.Url, scanRun.Instance.Collection);
+        var project = scanRun.Project;
+        var instance = project.Instance;
+
+        logger.LogInformation("📂 Project: {ProjectName}  ({Url})", project.Name, project.Url);
+        logger.LogInformation("📋 Server : {Url}/{Collection}", instance.Url, instance.Collection);
 
         try
         {
-            // Update status to Running
             scanRun.Status = ScanStatus.Running;
             scanRun.StartedAt = DateTime.UtcNow;
             await dbContext.SaveChangesAsync(ct);
 
-            // Parse credentials
-            var creds = ParseCredentials(scanRun.Instance.CredentialReference);
+            // Resolve credentials: project-specific overrides instance shared
+            var credSource = !string.IsNullOrEmpty(project.CredentialReference)
+                ? project.CredentialReference
+                : instance.CredentialReference;
+
+            var creds = ParseCredentials(credSource ?? string.Empty);
             if (string.IsNullOrEmpty(creds.Username) || string.IsNullOrEmpty(creds.Password))
             {
-                await FailScanAsync(scanRun, "Invalid credentials - username or password missing", ct);
+                await FailScanAsync(scanRun, "No credentials available for this project (neither project-specific nor instance-shared).", ct);
                 return;
             }
 
-            logger.LogInformation("🔑 Authenticating as: {Username}", creds.Username);
+            logger.LogInformation("🔑 Auth as: {Username} (source: {Src})",
+                creds.Username,
+                !string.IsNullOrEmpty(project.CredentialReference) ? "project" : "instance-shared");
 
-            var baseUrl = scanRun.Instance.Url;
-            var collection = scanRun.Instance.Collection;
-
-            // Test connection
-            logger.LogInformation("🔗 Testing connection to Azure DevOps...");
-            var (connected, connectionMessage) = await azureDevOpsClient.TestConnectionAsync(
-                baseUrl, collection, creds.Username, creds.Password, ct);
-
+            // Connection test
+            var (connected, msg) = await azureDevOpsClient.TestConnectionAsync(
+                instance.Url, instance.Collection, creds.Username, creds.Password, ct);
             if (!connected)
             {
-                logger.LogError("❌ Connection failed: {Message}", connectionMessage);
-                await FailScanAsync(scanRun, $"Connection failed: {connectionMessage}", ct);
+                await FailScanAsync(scanRun, $"Connection failed: {msg}", ct);
+                return;
+            }
+            logger.LogInformation("✅ Connection OK");
+
+            // Fetch repos for THIS project only
+            var repos = await azureDevOpsClient.GetRepositoriesAsync(
+                instance.Url, instance.Collection, project.AzureProjectId,
+                creds.Username, creds.Password, ct);
+
+            logger.LogInformation("📁 Project '{Project}' has {Count} repositories", project.AzureProjectId, repos.Count);
+
+            if (repos.Count == 0)
+            {
+                project.LastScannedAt = DateTime.UtcNow;
+                await CompleteScanAsync(scanRun, 0, 0, 0, 0, 0, 0, 0, "No repositories in project", ct);
                 return;
             }
 
-            logger.LogInformation("✅ Connection successful: {Message}", connectionMessage);
-
-            // Fetch ALL projects from Azure DevOps
-            logger.LogInformation("📋 Fetching projects from Azure DevOps...");
-            var azureProjects = await azureDevOpsClient.GetProjectsAsync(
-                baseUrl, collection, creds.Username, creds.Password, ct);
-
-            logger.LogInformation("📋 Found {Count} projects in Azure DevOps", azureProjects.Count);
-
-            if (azureProjects.Count == 0)
+            var stats = new ScanStats();
+            foreach (var repo in repos)
             {
-                await CompleteScanAsync(scanRun, 0, 0, 0, 0, 0, 0, 0,
-                    "No projects found in Azure DevOps collection", ct);
-                return;
-            }
-
-            var scanStats = new ScanStats();
-
-            // Process each Azure DevOps project
-            foreach (var azureProject in azureProjects)
-            {
-                logger.LogInformation("═══════════════════════════════════════════════════════════════");
-                logger.LogInformation("📂 PROJECT: {ProjectName}", azureProject.Name);
-                logger.LogInformation("═══════════════════════════════════════════════════════════════");
-
-                // Ensure project entity exists in database
-                var projectEntity = await dbContext.Set<Project>()
-                    .FirstOrDefaultAsync(p => p.InstanceId == scanRun.Instance.Id && p.AzureProjectId == azureProject.Id, ct);
-
-                if (projectEntity == null)
+                try
                 {
-                    projectEntity = new Project
-                    {
-                        InstanceId = scanRun.Instance.Id,
-                        Name = azureProject.Name,
-                        AzureProjectId = azureProject.Id,
-                        DiscoveredAt = DateTime.UtcNow
-                    };
-                    dbContext.Set<Project>().Add(projectEntity);
-                    await dbContext.SaveChangesAsync(ct);
-                    logger.LogInformation("   ✨ Created new project record (ID: {Id})", projectEntity.Id);
+                    await ProcessRepositoryAsync(instance, project, repo, creds, scanRun, stats, ct);
                 }
-
-                // Fetch repositories for this project
-                var repos = await azureDevOpsClient.GetRepositoriesAsync(
-                    baseUrl, collection, azureProject.Name, creds.Username, creds.Password, ct);
-
-                logger.LogInformation("   📁 Found {Count} repositories", repos.Count);
-
-                if (repos.Count == 0)
+                catch (Exception ex)
                 {
-                    continue;
-                }
-
-                // Log all repos
-                foreach (var r in repos)
-                {
-                    logger.LogDebug("      📁 {Name} (branch: {Branch}, size: {Size}KB)",
-                        r.Name, r.DefaultBranch, r.Size / 1024);
-                }
-
-                // Process each repository
-                foreach (var repo in repos)
-                {
-                    try
-                    {
-                        await ProcessRepositoryAsync(
-                            baseUrl, collection, azureProject.Name, repo, creds,
-                            scanRun, projectEntity, scanStats, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        scanStats.ReposFailed++;
-                        logger.LogError(ex, "❌ Failed to scan repository: {Repo}", repo.Name);
-                    }
+                    stats.ReposFailed++;
+                    logger.LogError(ex, "❌ Failed to scan repository: {Repo}", repo.Name);
                 }
             }
 
-            // Complete the scan
+            project.LastScannedAt = DateTime.UtcNow;
             await CompleteScanAsync(scanRun,
-                scanStats.ReposScanned, scanStats.ReposFailed,
-                scanStats.TotalVulnerabilities, scanStats.Critical,
-                scanStats.High, scanStats.Medium, scanStats.Low,
-                null, ct);
+                stats.ReposScanned, stats.ReposFailed,
+                stats.TotalVulnerabilities, stats.Critical,
+                stats.High, stats.Medium, stats.Low, null, ct);
 
             logger.LogInformation("═══════════════════════════════════════════════════════════════");
-            logger.LogInformation("✅ SCAN #{ScanRunId} COMPLETED in {Duration}ms", scanRunId, stopwatch.ElapsedMilliseconds);
-            logger.LogInformation("   📊 Projects: {Count} scanned", azureProjects.Count);
-            logger.LogInformation("   📊 Repos: {Scanned} scanned, {Failed} failed", scanStats.ReposScanned, scanStats.ReposFailed);
-            logger.LogInformation("   📦 Packages: {Count} discovered", scanStats.TotalPackages);
-            logger.LogInformation("   🔴 Vulnerabilities: {Total} (C:{Critical} H:{High} M:{Medium} L:{Low})",
-                scanStats.TotalVulnerabilities, scanStats.Critical, scanStats.High, scanStats.Medium, scanStats.Low);
-            logger.LogInformation("═══════════════════════════════════════════════════════════════");
+            logger.LogInformation("✅ SCAN #{ScanRunId} DONE in {Ms}ms — repos:{R}/{T} pkgs:{P} vulns:{V}",
+                scanRunId, stopwatch.ElapsedMilliseconds,
+                stats.ReposScanned, repos.Count, stats.TotalPackages, stats.TotalVulnerabilities);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "❌ Scan #{ScanRunId} failed with exception", scanRunId);
+            logger.LogError(ex, "❌ Scan #{ScanRunId} failed", scanRunId);
             await FailScanAsync(scanRun, ex.Message, ct);
         }
     }
 
     private async Task ProcessRepositoryAsync(
-        string baseUrl, string collection, string project,
+        AzureDevOpsInstance instance, Project project,
         AzureDevOpsRepo repo,
-        (string Username, string Password, string Branch) creds,
-        ScanRun scanRun, Project projectEntity,
-        ScanStats stats, CancellationToken ct)
+        (string Username, string Password) creds,
+        ScanRun scanRun, ScanStats stats, CancellationToken ct)
     {
         logger.LogInformation("───────────────────────────────────────────────────────────────");
-        logger.LogInformation("📁 SCANNING REPOSITORY: {RepoName}", repo.Name);
-        logger.LogInformation("───────────────────────────────────────────────────────────────");
+        logger.LogInformation("📁 SCANNING REPO: {RepoName}", repo.Name);
 
-        var branch = string.IsNullOrEmpty(creds.Branch) || creds.Branch == "main" || creds.Branch == "master"
-            ? repo.DefaultBranch
-            : creds.Branch;
+        // Branch resolution: project default → repo default
+        var branch = !string.IsNullOrWhiteSpace(project.DefaultBranch)
+            ? project.DefaultBranch!
+            : repo.DefaultBranch;
 
         logger.LogInformation("   🔀 Branch: {Branch}", branch);
 
-        // Ensure repository entity exists
         var repoEntity = await dbContext.Set<Repository>()
-            .FirstOrDefaultAsync(r => r.ProjectId == projectEntity.Id && r.Name == repo.Name, ct);
+            .FirstOrDefaultAsync(r => r.ProjectId == project.Id && r.Name == repo.Name, ct);
 
         if (repoEntity == null)
         {
             repoEntity = new Repository
             {
-                ProjectId = projectEntity.Id,
+                ProjectId = project.Id,
                 Name = repo.Name,
                 CloneUrl = repo.RemoteUrl,
                 DefaultBranch = repo.DefaultBranch,
                 IsEnabled = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
             };
             dbContext.Set<Repository>().Add(repoEntity);
             await dbContext.SaveChangesAsync(ct);
-            logger.LogInformation("   ✨ Created new repository record (ID: {Id})", repoEntity.Id);
         }
 
-        // Get all items in repository
-        logger.LogInformation("   📃 Fetching file list...");
         var items = await azureDevOpsClient.GetItemsAsync(
-            baseUrl, collection, project, repo.Name, "/", branch,
-            creds.Username, creds.Password, ct);
+            instance.Url, instance.Collection, project.AzureProjectId, repo.Name,
+            "/", branch, creds.Username, creds.Password, ct);
 
-        logger.LogInformation("   📃 Found {Count} files/folders", items.Count);
-
-        // Find dependency files
         var depFiles = items
             .Where(i => i.GitObjectType == "blob" && IsDependencyFile(Path.GetFileName(i.Path)))
             .ToList();
 
         if (depFiles.Count == 0)
         {
-            logger.LogInformation("   ⚠️ No dependency files found in repository");
+            logger.LogInformation("   ⚠️ No dependency files");
             stats.ReposScanned++;
             repoEntity.LastScannedAt = DateTime.UtcNow;
             await dbContext.SaveChangesAsync(ct);
             return;
         }
 
-        logger.LogInformation("   📋 Found {Count} dependency files to scan:", depFiles.Count);
-        foreach (var f in depFiles)
-        {
-            logger.LogInformation("      • {Path}", f.Path);
-        }
+        logger.LogInformation("   📋 {Count} dependency files", depFiles.Count);
 
-        // Process each dependency file
-        int repoPackageCount = 0;
-        int repoVulnCount = 0;
+        int repoPkgs = 0, repoVulns = 0;
 
         foreach (var file in depFiles)
         {
             try
             {
-                var fileName = Path.GetFileName(file.Path);
-                logger.LogInformation("   📄 Processing: {Path}", file.Path);
-
-                // Fetch file content
                 var content = await azureDevOpsClient.GetFileContentAsync(
-                    baseUrl, collection, project, repo.Name, file.Path, branch,
-                    creds.Username, creds.Password, ct);
+                    instance.Url, instance.Collection, project.AzureProjectId, repo.Name,
+                    file.Path, branch, creds.Username, creds.Password, ct);
 
-                if (string.IsNullOrEmpty(content))
-                {
-                    logger.LogWarning("      ⚠️ Empty file content");
-                    continue;
-                }
+                if (string.IsNullOrEmpty(content)) continue;
 
-                logger.LogDebug("      📝 Content length: {Length} bytes", content.Length);
-
-                // Create SBOM record
                 var sbom = new Sbom
                 {
                     RepositoryId = repoEntity.Id,
@@ -286,68 +209,51 @@ public sealed class ScanProcessor(
                     Format = "CycloneDX",
                     Generator = "Vulscan",
                     GeneratedAt = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
                 };
                 dbContext.Set<Sbom>().Add(sbom);
                 await dbContext.SaveChangesAsync(ct);
 
-                // Scan dependencies
                 var result = await dependencyScanner.ScanDependenciesAsync(
-                    fileName, file.Path, content, scanRun.Id, repoEntity.Id, sbom.Id, ct);
+                    Path.GetFileName(file.Path), file.Path, content,
+                    scanRun.Id, repoEntity.Id, sbom.Id, ct);
 
-                // Update SBOM with results
                 sbom.ComponentCount = result.Packages.Count;
                 sbom.SbomJson = result.SbomJson;
                 sbom.GenerationDurationMs = 0;
 
-                // Save packages
                 if (result.Packages.Count > 0)
                 {
-                    foreach (var pkg in result.Packages)
-                    {
-                        pkg.SbomId = sbom.Id;
-                    }
+                    foreach (var pkg in result.Packages) pkg.SbomId = sbom.Id;
                     dbContext.Set<DiscoveredPackage>().AddRange(result.Packages);
-                    repoPackageCount += result.Packages.Count;
+                    repoPkgs += result.Packages.Count;
                     stats.TotalPackages += result.Packages.Count;
-                    logger.LogInformation("      ✅ Found {Count} packages ({Ecosystem})",
-                        result.Packages.Count, result.Ecosystem);
                 }
 
-                // Save vulnerabilities
                 if (result.Vulnerabilities.Count > 0)
                 {
-                    foreach (var vuln in result.Vulnerabilities)
-                    {
-                        vuln.SbomId = sbom.Id;
-                    }
+                    foreach (var v in result.Vulnerabilities) v.SbomId = sbom.Id;
                     dbContext.Set<Vulnerability>().AddRange(result.Vulnerabilities);
-
-                    repoVulnCount += result.Vulnerabilities.Count;
+                    repoVulns += result.Vulnerabilities.Count;
                     stats.TotalVulnerabilities += result.Vulnerabilities.Count;
                     stats.Critical += result.Vulnerabilities.Count(v => v.Severity == VulnerabilitySeverity.Critical);
                     stats.High += result.Vulnerabilities.Count(v => v.Severity == VulnerabilitySeverity.High);
                     stats.Medium += result.Vulnerabilities.Count(v => v.Severity == VulnerabilitySeverity.Medium);
                     stats.Low += result.Vulnerabilities.Count(v => v.Severity == VulnerabilitySeverity.Low);
-
-                    logger.LogWarning("      🔴 Found {Count} vulnerabilities", result.Vulnerabilities.Count);
                 }
 
                 await dbContext.SaveChangesAsync(ct);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "      ❌ Failed to process: {Path}", file.Path);
+                logger.LogError(ex, "❌ Failed processing {Path}", file.Path);
             }
         }
 
-        // Update repository last scanned
         repoEntity.LastScannedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(ct);
         stats.ReposScanned++;
-
-        logger.LogInformation("   📊 Repository summary: {Packages} packages, {Vulns} vulnerabilities",
-            repoPackageCount, repoVulnCount);
+        logger.LogInformation("   📊 Repo summary: {Pkgs} pkgs, {Vulns} vulns", repoPkgs, repoVulns);
     }
 
     private static bool IsDependencyFile(string fileName)
@@ -356,13 +262,9 @@ public sealed class ScanProcessor(
         {
             if (pattern.StartsWith('*'))
             {
-                if (fileName.EndsWith(pattern[1..], StringComparison.OrdinalIgnoreCase))
-                    return true;
+                if (fileName.EndsWith(pattern[1..], StringComparison.OrdinalIgnoreCase)) return true;
             }
-            else if (fileName.Equals(pattern, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            else if (fileName.Equals(pattern, StringComparison.OrdinalIgnoreCase)) return true;
         }
         return false;
     }
@@ -395,39 +297,30 @@ public sealed class ScanProcessor(
             : 0;
         scanRun.ErrorLog = error;
         await dbContext.SaveChangesAsync(ct);
-
-        logger.LogError("═══════════════════════════════════════════════════════════════");
         logger.LogError("❌ SCAN #{ScanRunId} FAILED: {Error}", scanRun.Id, error);
-        logger.LogError("═══════════════════════════════════════════════════════════════");
     }
 
-    private static (string Username, string Password, string Branch) ParseCredentials(string json)
+    private static (string Username, string Password) ParseCredentials(string json)
     {
+        if (string.IsNullOrWhiteSpace(json)) return ("", "");
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             return (
                 root.TryGetProperty("username", out var u) ? u.GetString() ?? "" : "",
-                root.TryGetProperty("password", out var p) ? p.GetString() ?? "" : "",
-                root.TryGetProperty("branch", out var b) ? b.GetString() ?? "main" : "main"
+                root.TryGetProperty("password", out var p) ? p.GetString() ?? "" : ""
             );
         }
-        catch
-        {
-            return ("", "", "main");
-        }
+        catch { return ("", ""); }
     }
 
-    private class ScanStats
+    private sealed class ScanStats
     {
-        public int ReposScanned { get; set; }
-        public int ReposFailed { get; set; }
-        public int TotalPackages { get; set; }
-        public int TotalVulnerabilities { get; set; }
-        public int Critical { get; set; }
-        public int High { get; set; }
-        public int Medium { get; set; }
-        public int Low { get; set; }
+        public int ReposScanned;
+        public int ReposFailed;
+        public int TotalPackages;
+        public int TotalVulnerabilities;
+        public int Critical, High, Medium, Low;
     }
 }

@@ -38,10 +38,10 @@ public sealed class ScansController(
     public async Task<IActionResult> GetHistory(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25,
-        [FromQuery] Guid? instanceId = null,
+        [FromQuery] Guid? projectId = null,
         CancellationToken ct = default)
     {
-        var result = await scanService.GetScanHistoryAsync(page, pageSize, instanceId, ct);
+        var result = await scanService.GetScanHistoryAsync(page, pageSize, projectId, ct);
         return Ok(ApiResponse<PagedResult<ScanRunDto>>.Ok(result));
     }
 

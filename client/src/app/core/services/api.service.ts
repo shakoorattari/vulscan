@@ -4,20 +4,29 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
     ApiResponse,
-    CreateInstanceRequest,
+    CreateProjectRequest,
     DashboardSummary,
+    DiscoveryImportRequest,
+    DiscoveryImportResponse,
+    DiscoveryListRequest,
+    DiscoveryListResponse,
     ExecutiveSummaryReport,
     InstanceDto,
     InstanceSummary,
     PackageInventory,
     PagedResult,
     ProjectDetailReport,
+    ProjectDto,
     ProjectSummary,
+    ProjectSummaryDto,
     ScanRun,
+    ScheduleSettingsDto,
     SeverityTrend,
     TriggerScanRequest,
     TriggerScanResponse,
     UpdateInstanceRequest,
+    UpdateProjectRequest,
+    UpdateScheduleSettingsRequest,
     Vulnerability,
     VulnerabilityDetailReport,
     VulnerabilitySummaryItem,
@@ -42,11 +51,11 @@ export class ApiService {
   getScanHistory(
     page = 1,
     pageSize = 25,
-    instanceId?: string,
+    projectId?: string,
   ): Observable<ApiResponse<PagedResult<ScanRun>>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (instanceId !== undefined && instanceId !== null) {
-      params = params.set('instanceId', instanceId);
+    if (projectId !== undefined && projectId !== null) {
+      params = params.set('projectId', projectId);
     }
     return this.http.get<ApiResponse<PagedResult<ScanRun>>>(`${this.baseUrl}/scans`, { params });
   }
@@ -96,8 +105,8 @@ export class ApiService {
     return this.http.get<ApiResponse<InstanceDto>>(`${this.baseUrl}/instances/${id}`);
   }
 
-  createInstance(request: CreateInstanceRequest): Observable<ApiResponse<InstanceDto>> {
-    return this.http.post<ApiResponse<InstanceDto>>(`${this.baseUrl}/instances`, request);
+  createInstance(): never {
+    throw new Error('Instances are now created implicitly via createProject() or discoverProjects(). Use those instead.');
   }
 
   updateInstance(id: string, request: UpdateInstanceRequest): Observable<ApiResponse<InstanceDto>> {
@@ -110,6 +119,61 @@ export class ApiService {
 
   testInstanceConnection(id: string): Observable<ApiResponse<void>> {
     return this.http.post<ApiResponse<void>>(`${this.baseUrl}/instances/${id}/test`, {});
+  }
+
+  // ── Projects (first-class scannable target) ────────────────────────────────
+  getProjects(): Observable<ApiResponse<ProjectDto[]>> {
+    return this.http.get<ApiResponse<ProjectDto[]>>(`${this.baseUrl}/projects`);
+  }
+
+  getProjectSummariesList(): Observable<ApiResponse<ProjectSummaryDto[]>> {
+    return this.http.get<ApiResponse<ProjectSummaryDto[]>>(`${this.baseUrl}/projects/summaries`);
+  }
+
+  getProjectDetailById(id: string): Observable<ApiResponse<ProjectDto>> {
+    return this.http.get<ApiResponse<ProjectDto>>(`${this.baseUrl}/projects/${id}`);
+  }
+
+  createProject(request: CreateProjectRequest): Observable<ApiResponse<ProjectDto>> {
+    return this.http.post<ApiResponse<ProjectDto>>(`${this.baseUrl}/projects`, request);
+  }
+
+  updateProject(id: string, request: UpdateProjectRequest): Observable<ApiResponse<ProjectDto>> {
+    return this.http.put<ApiResponse<ProjectDto>>(`${this.baseUrl}/projects/${id}`, request);
+  }
+
+  deleteProject(id: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/projects/${id}`);
+  }
+
+  enableProject(id: string): Observable<ApiResponse<ProjectDto>> {
+    return this.http.post<ApiResponse<ProjectDto>>(`${this.baseUrl}/projects/${id}/enable`, {});
+  }
+
+  disableProject(id: string): Observable<ApiResponse<ProjectDto>> {
+    return this.http.post<ApiResponse<ProjectDto>>(`${this.baseUrl}/projects/${id}/disable`, {});
+  }
+
+  triggerProjectScan(id: string): Observable<ApiResponse<TriggerScanResponse>> {
+    return this.http.post<ApiResponse<TriggerScanResponse>>(`${this.baseUrl}/projects/${id}/scan`, {});
+  }
+
+  // ── Discovery ────────────────────────────────────────────────────────
+  discoverProjects(request: DiscoveryListRequest): Observable<ApiResponse<DiscoveryListResponse>> {
+    return this.http.post<ApiResponse<DiscoveryListResponse>>(`${this.baseUrl}/discovery/list`, request);
+  }
+
+  importDiscoveredProjects(request: DiscoveryImportRequest): Observable<ApiResponse<DiscoveryImportResponse>> {
+    return this.http.post<ApiResponse<DiscoveryImportResponse>>(`${this.baseUrl}/discovery/import`, request);
+  }
+
+  // ── Schedule Settings (admin) ───────────────────────────────────────
+  getScheduleSettings(): Observable<ApiResponse<ScheduleSettingsDto>> {
+    return this.http.get<ApiResponse<ScheduleSettingsDto>>(`${this.baseUrl}/settings/schedule`);
+  }
+
+  updateScheduleSettings(request: UpdateScheduleSettingsRequest): Observable<ApiResponse<ScheduleSettingsDto>> {
+    return this.http.put<ApiResponse<ScheduleSettingsDto>>(`${this.baseUrl}/settings/schedule`, request);
   }
 
   // ── Reports ────────────────────────────────────────────────────────

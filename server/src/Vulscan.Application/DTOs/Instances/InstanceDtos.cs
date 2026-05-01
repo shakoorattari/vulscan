@@ -1,50 +1,9 @@
 namespace Vulscan.Application.DTOs.Instances;
 
 /// <summary>
-/// DTO for creating a new Azure DevOps instance.
-/// </summary>
-public record CreateInstanceRequest
-{
-    /// <summary>
-    /// Display name for this instance.
-    /// </summary>
-    public required string Name { get; init; }
-
-    /// <summary>
-    /// Full URL to the Azure DevOps project (e.g., https://devops.ishj.ae/SDD/TransLynk).
-    /// </summary>
-    public required string ProjectUrl { get; init; }
-
-    /// <summary>
-    /// Username for authentication (e.g., email).
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Password or Personal Access Token for authentication.
-    /// </summary>
-    public required string Password { get; init; }
-
-    /// <summary>
-    /// Branch to scan (default: main or master).
-    /// </summary>
-    public string? Branch { get; init; }
-}
-
-/// <summary>
-/// DTO for updating an existing instance.
-/// </summary>
-public record UpdateInstanceRequest
-{
-    public required string Name { get; init; }
-    public string? Username { get; init; }
-    public string? Password { get; init; }
-    public string? Branch { get; init; }
-    public bool IsEnabled { get; init; } = true;
-}
-
-/// <summary>
-/// Response DTO for instance details.
+/// Azure DevOps server (URL + collection). Hosts one or more Projects.
+/// Optionally stores shared credentials used by the Discovery flow; per-project
+/// credentials always take precedence.
 /// </summary>
 public record InstanceDto
 {
@@ -52,23 +11,11 @@ public record InstanceDto
     public required string Name { get; init; }
     public required string Url { get; init; }
     public required string Collection { get; init; }
-    public required string ProjectName { get; init; }
     public required string AuthMethod { get; init; }
     public bool IsEnabled { get; init; }
+    public bool HasSharedCredentials { get; init; }
+    public int ProjectCount { get; init; }
     public DateTime CreatedAt { get; init; }
-    public DateTime? LastScannedAt { get; init; }
-    public int TotalScans { get; init; }
-    public int TotalVulnerabilities { get; init; }
-
-    // Latest scan snapshot (null when no scans have run yet)
-    public Guid? LastScanId { get; init; }
-    public string? LastScanStatus { get; init; }
-    public int? LastScanDurationSeconds { get; init; }
-    public int LastScanCriticalCount { get; init; }
-    public int LastScanHighCount { get; init; }
-    public int LastScanMediumCount { get; init; }
-    public int LastScanLowCount { get; init; }
-    public int LastScanTotalVulnerabilities { get; init; }
 }
 
 /// <summary>
@@ -78,6 +25,18 @@ public record InstanceSummaryDto
 {
     public Guid Id { get; init; }
     public required string Name { get; init; }
-    public required string ProjectName { get; init; }
+    public required string Url { get; init; }
+    public required string Collection { get; init; }
     public bool IsEnabled { get; init; }
+}
+
+/// <summary>
+/// Update an existing instance (rename, toggle, refresh shared discovery creds).
+/// </summary>
+public record UpdateInstanceRequest
+{
+    public required string Name { get; init; }
+    public string? Username { get; init; }
+    public string? Password { get; init; }
+    public bool IsEnabled { get; init; } = true;
 }

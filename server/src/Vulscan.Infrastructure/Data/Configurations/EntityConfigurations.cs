@@ -33,6 +33,11 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
 
         builder.Property(p => p.Name).HasMaxLength(300).IsRequired();
         builder.Property(p => p.AzureProjectId).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.Url).HasMaxLength(1000).IsRequired();
+        builder.Property(p => p.CredentialReference).HasMaxLength(1000);
+        builder.Property(p => p.DefaultBranch).HasMaxLength(200);
+        builder.Property(p => p.IsEnabled).HasDefaultValue(true);
+        builder.Property(p => p.CronExpression).HasMaxLength(100);
 
         builder.HasOne(p => p.Instance)
             .WithMany(i => i.Projects)

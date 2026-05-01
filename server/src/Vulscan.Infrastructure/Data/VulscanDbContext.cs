@@ -17,6 +17,7 @@ public class VulscanDbContext(DbContextOptions<VulscanDbContext> options) : DbCo
     public DbSet<DiscoveredPackage> DiscoveredPackages => Set<DiscoveredPackage>();
     public DbSet<Vulnerability> Vulnerabilities => Set<Vulnerability>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ScheduleSettings> ScheduleSettings => Set<ScheduleSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

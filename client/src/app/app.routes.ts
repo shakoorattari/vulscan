@@ -24,6 +24,11 @@ export const routes: Routes = [
           import('./features/scans/scans.component').then((m) => m.ScansComponent),
       },
       {
+        path: 'discovery',
+        loadComponent: () =>
+          import('./features/discovery/discovery.component').then((m) => m.DiscoveryComponent),
+      },
+      {
         path: 'scans/:scanId/report',
         loadComponent: () =>
           import('./features/scans/scan-report.component').then((m) => m.ScanReportComponent),
@@ -49,6 +54,11 @@ export const routes: Routes = [
           import('./features/reports/vulnerability-detail.component').then(
             (m) => m.VulnerabilityDetailComponent,
           ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
       },
     ],
   },

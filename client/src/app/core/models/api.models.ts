@@ -70,8 +70,8 @@ export interface TopVulnerableRepo {
 
 export interface ScanRun {
   id: string;
-  instanceId?: string;
-  instanceName?: string;
+  projectId?: string;
+  projectName?: string;
   startedAt: string;
   completedAt?: string;
   durationSeconds: number;
@@ -88,7 +88,7 @@ export interface ScanRun {
 }
 
 export interface TriggerScanRequest {
-  instanceId: string;
+  projectId: string;
 }
 
 export interface TriggerScanResponse {
@@ -115,19 +115,10 @@ export interface Vulnerability {
 }
 
 // Instance Management
-export interface CreateInstanceRequest {
-  name: string;
-  projectUrl: string;
-  username: string;
-  password: string;
-  branch?: string;
-}
-
 export interface UpdateInstanceRequest {
   name: string;
   username?: string;
   password?: string;
-  branch?: string;
   isEnabled: boolean;
 }
 
@@ -136,15 +127,56 @@ export interface InstanceDto {
   name: string;
   url: string;
   collection: string;
-  projectName: string;
   authMethod: string;
   isEnabled: boolean;
+  hasSharedCredentials: boolean;
+  projectCount: number;
+  createdAt: string;
+}
+
+export interface InstanceSummary {
+  id: string;
+  name: string;
+  url: string;
+  collection: string;
+  isEnabled: boolean;
+}
+
+// Project Management (first-class scannable target)
+export interface CreateProjectRequest {
+  name: string;
+  projectUrl: string;
+  username: string;
+  password: string;
+  defaultBranch?: string;
+  cronExpression?: string;
+}
+
+export interface UpdateProjectRequest {
+  name: string;
+  username?: string;
+  password?: string;
+  defaultBranch?: string;
+  cronExpression?: string;
+  isEnabled: boolean;
+}
+
+export interface ProjectDto {
+  id: string;
+  name: string;
+  url: string;
+  defaultBranch?: string;
+  isEnabled: boolean;
+  hasOwnCredentials: boolean;
+  instanceId: string;
+  instanceName: string;
+  instanceUrl: string;
+  collection: string;
+  azureProjectId: string;
+  repositoryCount: number;
   createdAt: string;
   lastScannedAt?: string;
   totalScans: number;
-  totalVulnerabilities: number;
-
-  // Latest scan snapshot (null when no scans have run yet)
   lastScanId?: string;
   lastScanStatus?: string;
   lastScanDurationSeconds?: number;
@@ -153,13 +185,63 @@ export interface InstanceDto {
   lastScanMediumCount: number;
   lastScanLowCount: number;
   lastScanTotalVulnerabilities: number;
+  cronExpression?: string;
+  effectiveCron?: string;
 }
 
-export interface InstanceSummary {
+export interface ProjectSummaryDto {
   id: string;
   name: string;
-  projectName: string;
+  url: string;
   isEnabled: boolean;
+}
+
+// Schedule Settings (admin) ─────────────────────────────────
+export interface ScheduleSettingsDto {
+  cronExpression: string;
+  cronDescription: string;
+  enabled: boolean;
+  nextRunUtc?: string;
+  updatedAt: string;
+}
+
+export interface UpdateScheduleSettingsRequest {
+  cronExpression: string;
+  enabled: boolean;
+}
+
+// Discovery (list + import) ─────────────────────────────────────
+export interface DiscoveryListRequest {
+  serverUrl: string;
+  collection: string;
+  username: string;
+  password: string;
+}
+
+export interface DiscoveredProject {
+  id: string;
+  name: string;
+  description?: string;
+  alreadyImported: boolean;
+}
+
+export interface DiscoveryListResponse {
+  instanceId: string;
+  serverUrl: string;
+  collection: string;
+  projects: DiscoveredProject[];
+}
+
+export interface DiscoveryImportRequest {
+  instanceId: string;
+  azureProjectIds: string[];
+  defaultBranch?: string;
+}
+
+export interface DiscoveryImportResponse {
+  imported: number;
+  skipped: number;
+  projectIds: string[];
 }
 
 // ── Report Models ────────────────────────────────────────────────

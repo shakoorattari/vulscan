@@ -21,6 +21,10 @@ public sealed class ScanBackgroundWorker(
     {
         logger.LogInformation("Scan background worker started");
 
+        // Recover orphaned "Running" scans left behind by a previous crash/restart.
+        // They are re-queued so this process can pick them up cleanly.
+        await RecoverOrphanedScansAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -68,6 +72,38 @@ public sealed class ScanBackgroundWorker(
             queuedScan.CompletedAt = DateTime.UtcNow;
             queuedScan.ErrorLog = ex.Message;
             await dbContext.SaveChangesAsync(ct);
+        }
+    }
+
+    /// <summary>
+    /// On startup, requeue any scans left in the Running state by a previous
+    /// process (crash, restart, etc.). They will be picked up by the next poll.
+    /// </summary>
+    private async Task RecoverOrphanedScansAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DbContext>();
+
+            var orphans = await db.Set<ScanRun>()
+                .Where(s => s.Status == ScanStatus.Running)
+                .ToListAsync(ct);
+
+            if (orphans.Count == 0) return;
+
+            foreach (var s in orphans)
+            {
+                s.Status = ScanStatus.Queued;
+                s.CompletedAt = null;
+                s.ErrorLog = null;
+            }
+            await db.SaveChangesAsync(ct);
+            logger.LogWarning("Recovered {Count} orphaned Running scan(s) → re-queued", orphans.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to recover orphaned scans");
         }
     }
 }

@@ -17,5 +17,4 @@ public class AzureDevOpsInstance : BaseEntity
 
     // Navigation
     public ICollection<Project> Projects { get; set; } = [];
-    public ICollection<ScanRun> ScanRuns { get; set; } = [];
 }
