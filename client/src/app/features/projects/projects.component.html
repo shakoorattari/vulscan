@@ -156,11 +156,10 @@
           >
             @if (addingProject()) {
               <mat-spinner diameter="20"></mat-spinner>
-              <span>Saving...</span>
             } @else {
               <mat-icon>save</mat-icon>
-              <span>Save Project</span>
             }
+            <span>{{ addingProject() ? 'Saving...' : 'Save Project' }}</span>
           </button>
         </div>
       </mat-card-content>

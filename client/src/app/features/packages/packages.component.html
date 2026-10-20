@@ -1,0 +1,256 @@
+<div class="packages-page">
+  <header class="page-hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <mat-icon>inventory_2</mat-icon>
+        <span>Package Inventory</span>
+      </div>
+      <h1>Discovered Packages</h1>
+      <p class="hero-subtitle">
+        Every dependency found in scanned repositories, with its known vulnerability status.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <button
+        mat-stroked-button
+        class="action-btn"
+        (click)="exportCsv()"
+        [disabled]="!exportScanRunId()"
+        [matTooltip]="exportScanRunId() ? 'Export this scan\'s packages as CSV' : 'Open a scan report to export its packages'"
+      >
+        <mat-icon>download</mat-icon>
+        <span>Export CSV</span>
+      </button>
+      <button
+        mat-stroked-button
+        class="action-btn"
+        (click)="downloadSbom()"
+        [disabled]="!exportScanRunId()"
+        [matTooltip]="exportScanRunId() ? 'Download this scan\'s CycloneDX SBOM' : 'Open a scan report to download its SBOM'"
+      >
+        <mat-icon>data_object</mat-icon>
+        <span>Download SBOM</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats Overview -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon primary"><mat-icon>inventory_2</mat-icon></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ inventory()?.totalPackages ?? 0 | number }}</span>
+        <span class="stat-label">Total Packages</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon warning"><mat-icon>report_problem</mat-icon></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ inventory()?.vulnerablePackages ?? 0 | number }}</span>
+        <span class="stat-label">Vulnerable Packages</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon critical"><mat-icon>gpp_bad</mat-icon></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ criticalTotal() | number }}</span>
+        <span class="stat-label">Critical Vulnerabilities</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon high"><mat-icon>warning</mat-icon></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ highTotal() | number }}</span>
+        <span class="stat-label">High Vulnerabilities</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="scope-row">
+        <mat-chip-set>
+          @if (scope().scanRunId) {
+            <mat-chip highlighted>Scan {{ scope().scanRunId!.slice(0, 8) }}</mat-chip>
+          }
+          @if (projectLabel()) {
+            <mat-chip highlighted>Project: {{ projectLabel() }}</mat-chip>
+          }
+          @if (scope().repositoryId) {
+            <mat-chip highlighted>Single repository</mat-chip>
+          }
+          @if (!scope().scanRunId && !scope().projectId && !scope().repositoryId) {
+            <mat-chip>Latest scan</mat-chip>
+          }
+        </mat-chip-set>
+        @if (scope().scanRunId || scope().projectId || scope().repositoryId) {
+          <button mat-button (click)="clearScope()">Show latest scan</button>
+        }
+      </div>
+
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Search packages</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            #searchBox
+            [value]="search()"
+            (input)="setSearch(searchBox.value)"
+            placeholder="Name, version, project, repository or file"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="eco-field">
+          <mat-label>Ecosystem</mat-label>
+          <mat-select [value]="ecosystem()" (selectionChange)="setEcosystem($event.value)">
+            <mat-option [value]="allEcosystems">All ecosystems</mat-option>
+            @for (eco of inventory()?.ecosystems ?? []; track eco.ecosystem) {
+              <mat-option [value]="eco.ecosystem">
+                {{ eco.ecosystem }} ({{ eco.totalPackages | number }})
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-slide-toggle
+          [checked]="vulnerableOnly()"
+          (change)="setVulnerableOnly($event.checked)"
+        >
+          Vulnerable only
+        </mat-slide-toggle>
+
+        <button mat-icon-button (click)="loadInventory()" matTooltip="Refresh" aria-label="Refresh">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Package Table -->
+  <mat-card class="table-card">
+    <mat-card-content>
+      @if (loading()) {
+        <div class="state-box">
+          <mat-spinner diameter="48"></mat-spinner>
+          <p>Loading packages...</p>
+        </div>
+      } @else if (errorMessage()) {
+        <div class="state-box error">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ errorMessage() }}</p>
+          <button mat-stroked-button (click)="loadInventory()">Try again</button>
+        </div>
+      } @else if (!filtered().length) {
+        <div class="state-box">
+          <mat-icon>inventory_2</mat-icon>
+          <p>
+            {{ inventory()?.totalPackages ? 'No packages match the current filters.' : 'No packages found for this selection.' }}
+          </p>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="pkg-table">
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Ecosystem</th>
+                <th>Project / Repository</th>
+                <th>Source file</th>
+                <th>Vulnerabilities</th>
+                <th class="expand-col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (pkg of page(); track pkg.id) {
+                <tr [class.vulnerable]="pkg.hasVulnerabilities">
+                  <td>
+                    <div class="pkg-name">{{ pkg.name }}</div>
+                    <div class="pkg-meta">
+                      <span class="mono">{{ pkg.version }}</span>
+                      <span class="dep-badge" [class.direct]="pkg.isDirect">
+                        {{ pkg.isDirect ? 'Direct' : 'Transitive' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td><span class="eco-badge">{{ pkg.ecosystem }}</span></td>
+                  <td>
+                    <div>{{ pkg.projectName }}</div>
+                    <div class="muted">{{ pkg.repositoryName }}</div>
+                  </td>
+                  <td class="mono muted source-file" [matTooltip]="pkg.sourceFile">
+                    {{ pkg.sourceFile }}
+                  </td>
+                  <td>
+                    @if (pkg.totalVulnerabilities) {
+                      <div class="sev-group">
+                        @if (pkg.criticalCount) {
+                          <span class="sev critical">{{ pkg.criticalCount }} Critical</span>
+                        }
+                        @if (pkg.highCount) {
+                          <span class="sev high">{{ pkg.highCount }} High</span>
+                        }
+                        @if (pkg.mediumCount) {
+                          <span class="sev medium">{{ pkg.mediumCount }} Medium</span>
+                        }
+                        @if (pkg.lowCount) {
+                          <span class="sev low">{{ pkg.lowCount }} Low</span>
+                        }
+                      </div>
+                    } @else if (pkg.hasVulnerabilities) {
+                      <span class="muted">Flagged</span>
+                    } @else {
+                      <span class="clean">None known</span>
+                    }
+                  </td>
+                  <td class="expand-col">
+                    @if (pkg.vulnerabilities.length) {
+                      <button
+                        mat-icon-button
+                        (click)="toggleExpanded(pkg.id)"
+                        [attr.aria-expanded]="isExpanded(pkg.id)"
+                        aria-label="Toggle vulnerability details"
+                      >
+                        <mat-icon>{{ isExpanded(pkg.id) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                      </button>
+                    }
+                  </td>
+                </tr>
+                @if (isExpanded(pkg.id)) {
+                  <tr class="detail-row">
+                    <td colspan="6">
+                      <ul class="cve-list">
+                        @for (vuln of pkg.vulnerabilities; track vuln.cveId) {
+                          <li>
+                            <span class="sev" [class]="vuln.severity.toLowerCase()">{{ vuln.severity }}</span>
+                            <a [routerLink]="['/reports/vulnerabilities', vuln.cveId]">{{ vuln.cveId }}</a>
+                            @if (vuln.cvssScore != null) {
+                              <span class="muted">CVSS {{ vuln.cvssScore }}</span>
+                            }
+                            @if (vuln.fixedVersion) {
+                              <span class="muted">Fixed in <span class="mono">{{ vuln.fixedVersion }}</span></span>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <mat-paginator
+          [length]="filtered().length"
+          [pageSize]="pageSize()"
+          [pageIndex]="pageIndex()"
+          [pageSizeOptions]="[25, 50, 100]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons
+        ></mat-paginator>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
