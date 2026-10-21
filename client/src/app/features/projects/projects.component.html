@@ -243,7 +243,7 @@
                 }
               </div>
 
-              @if (project.lastScannedAt) {
+              @if (project.resultsAsOf) {
                 <mat-divider></mat-divider>
                 <div class="vulnerabilities-summary">
                   <span class="summary-label">Last Scan Results:</span>
@@ -276,11 +276,26 @@
                       }
                     }
                   </div>
+                  @if (project.scanInProgress) {
+                    <span class="summary-note">
+                      <mat-icon>sync</mat-icon> Scan running — results from {{ project.resultsAsOf | date: 'MMM d, h:mm a' }}
+                    </span>
+                  } @else if (project.lastScanStatus && project.lastScanStatus !== 'Completed') {
+                    <span class="summary-note">
+                      <mat-icon>info</mat-icon> Latest scan {{ project.lastScanStatus.toLowerCase() }} — results from
+                      {{ project.resultsAsOf | date: 'MMM d, h:mm a' }}
+                    </span>
+                  }
                 </div>
               } @else {
+                <!-- No completed scan: no results yet, which is not the same as "no vulnerabilities". -->
                 <div class="never-scanned">
-                  <mat-icon>info</mat-icon>
-                  <span>Never scanned</span>
+                  <mat-icon>{{ project.scanInProgress ? 'sync' : 'info' }}</mat-icon>
+                  <span>
+                    @if (project.scanInProgress) { First scan in progress… }
+                    @else if (project.lastScanStatus) { No completed scan yet (latest: {{ project.lastScanStatus }}) }
+                    @else { Never scanned }
+                  </span>
                 </div>
               }
 

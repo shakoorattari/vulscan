@@ -22,6 +22,7 @@ public class VulscanDbContext(DbContextOptions<VulscanDbContext> options) : DbCo
     public DbSet<ScheduleSettings> ScheduleSettings => Set<ScheduleSettings>();
     public DbSet<SmtpConfiguration> SmtpConfigurations => Set<SmtpConfiguration>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<VulnerabilityIntel> VulnerabilityIntel => Set<VulnerabilityIntel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

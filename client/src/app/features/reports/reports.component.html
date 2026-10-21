@@ -21,6 +21,16 @@
           </mat-card-content>
         </mat-card>
       } @else {
+        @if (scansInProgress() > 0) {
+          <div class="scan-banner" role="status">
+            <mat-icon>sync</mat-icon>
+            <span>
+              {{ scansInProgress() }} {{ scansInProgress() === 1 ? 'project is' : 'projects are' }} being scanned. Until a
+              scan finishes, its project keeps showing the results of its last completed scan.
+            </span>
+          </div>
+        }
+
         <!-- Summary KPI cards -->
         <div class="kpi-grid">
           <mat-card class="kpi-card total-projects">
@@ -121,6 +131,9 @@
                       <a class="project-link" (click)="openProjectDetail(p.projectId)">
                         {{ p.projectName }}
                       </a>
+                      @if (p.scanInProgress) {
+                        <span class="scan-chip"><mat-icon>sync</mat-icon> Scanning</span>
+                      }
                     </td>
                   </ng-container>
 
@@ -164,7 +177,11 @@
                   <ng-container matColumnDef="totalVulnerabilities">
                     <th mat-header-cell *matHeaderCellDef mat-sort-header>Total</th>
                     <td mat-cell *matCellDef="let p">
-                      <strong>{{ p.totalVulnerabilities }}</strong>
+                      @if (p.lastScanAt) {
+                        <strong>{{ p.totalVulnerabilities }}</strong>
+                      } @else {
+                        <span class="no-results" matTooltip="No completed scan yet">—</span>
+                      }
                     </td>
                   </ng-container>
 

@@ -17,6 +17,9 @@ public sealed record ExecutiveSummaryReportDto
     public int LowCount { get; init; }
     public DateTime? LastScanDate { get; init; }
     public int? LastScanDurationSeconds { get; init; }
+
+    /// <summary>Projects with a scan queued or running. Their figures here still come from the previous completed scan.</summary>
+    public int ScansInProgress { get; init; }
     public List<EcosystemBreakdownDto> EcosystemBreakdown { get; init; } = [];
     public List<ProjectSummaryDto> ProjectSummaries { get; init; } = [];
     public List<SeverityTrendDto> SeverityTrend { get; init; } = [];
@@ -47,6 +50,12 @@ public sealed record ProjectSummaryDto
     public int HighCount { get; init; }
     public int MediumCount { get; init; }
     public int LowCount { get; init; }
+
+    /// <summary>When the scan these figures come from finished; null if the project has no completed scan.</summary>
+    public DateTime? LastScanAt { get; init; }
+
+    /// <summary>A scan is queued or running; the figures are from the previous completed scan (if any).</summary>
+    public bool ScanInProgress { get; init; }
 }
 
 /// <summary>
@@ -58,8 +67,11 @@ public sealed record ProjectDetailReportDto
     public string ProjectName { get; init; } = string.Empty;
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
 
-    /// <summary>When the scan this report reflects finished; null if the project was never scanned.</summary>
+    /// <summary>When the scan this report reflects finished; null if the project has no completed scan.</summary>
     public DateTime? LastScanAt { get; init; }
+
+    /// <summary>A newer scan is queued or running; this report still shows the previous completed one.</summary>
+    public bool ScanInProgress { get; init; }
     public int TotalRepositories { get; init; }
     public int TotalPackages { get; init; }
 
@@ -114,6 +126,14 @@ public sealed record ReportVulnerabilityDto
 
     /// <summary>Manifest/lock files in the repository that declare this package version.</summary>
     public List<string> SourceFiles { get; init; } = [];
+
+    /// <summary>Listed in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is confirmed.</summary>
+    public bool Kev { get; init; }
+    public DateTime? KevDueDate { get; init; }
+
+    /// <summary>Probability (0–1) of exploitation in the next 30 days, from FIRST EPSS; null if not scored.</summary>
+    public double? Epss { get; init; }
+    public double? EpssPercentile { get; init; }
 }
 
 /// <summary>
@@ -173,6 +193,8 @@ public sealed record VulnerabilitySummaryDto
     public int AffectedRepositories { get; init; }
     public int TotalOccurrences { get; init; }
     public string? FixedVersion { get; init; }
+    public bool Kev { get; init; }
+    public double? Epss { get; init; }
 }
 
 /// <summary>

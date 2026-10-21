@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using Vulscan.Application.Interfaces;
 using Vulscan.Domain.Entities;
 using Vulscan.Domain.Enums;
+using Vulscan.Application.Intel;
 using Vulscan.Infrastructure.Clients;
+using Vulscan.Infrastructure.Intel;
 
 namespace Vulscan.Infrastructure.Services;
 
@@ -65,7 +67,7 @@ public sealed partial class DependencyScanner(
                     var vuln = await GetVulnerabilityDetailsAsync(vref.Id, ct);
                     if (vuln is null) continue;
 
-                    var entity = MapToVulnerability(vuln, dep, scanRunId, repositoryId, sbomId);
+                    var entity = MapToVulnerability(vuln, dep, MapToOsvEcosystem(ecosystem), scanRunId, repositoryId, sbomId);
                     vulnerabilities.Add(entity);
 
                     logger.LogWarning(
@@ -584,14 +586,14 @@ public sealed partial class DependencyScanner(
     }
 
     private static Vulnerability MapToVulnerability(
-        OsvVulnerability vuln, DependencyInfo dep,
+        OsvVulnerability vuln, DependencyInfo dep, string osvEcosystem,
         Guid scanRunId, Guid repositoryId, Guid? sbomId)
     {
         var cveId = vuln.Aliases.FirstOrDefault(a => a.StartsWith("CVE-", StringComparison.OrdinalIgnoreCase))
                     ?? vuln.Id;
-        var cvss = ExtractCvssScore(vuln.Severity);
+        var (cvss, vector) = SelectCvss(vuln.Severity);
         var severity = MapSeverity(cvss, vuln);
-        var fixedVersion = ExtractFixedVersion(vuln.Affected, dep.Name);
+        var fixedVersion = ResolveFixedVersion(vuln.Affected, osvEcosystem, dep);
         var description = !string.IsNullOrWhiteSpace(vuln.Summary) ? vuln.Summary : vuln.Details;
 
         return new Vulnerability
@@ -605,6 +607,7 @@ public sealed partial class DependencyScanner(
             FixedVersion = fixedVersion,
             Severity = severity,
             CvssScore = cvss,
+            CvssVector = Truncate(vector, 200),
             Description = Truncate(description, 4000),
             SourceDb = "OSV",
             Status = VulnerabilityStatus.New,
@@ -614,44 +617,32 @@ public sealed partial class DependencyScanner(
     }
 
     /// <summary>
-    /// Parses the base score out of a CVSS vector string (e.g., "CVSS:3.1/AV:N/...").
-    /// Returns null if no parseable CVSS data is available.
+    /// The CVSS base score and vector of an advisory, calculated from the vector by the CVSS specification.
+    /// Prefers 3.x, then 2.0. A CVSS 4.0 vector is kept but not scored here (its score needs a lookup table), so
+    /// the score stays empty and the severity comes from the source's own rating.
     /// </summary>
-    private static double? ExtractCvssScore(List<OsvSeverity> severities)
+    private static (double? Score, string? Vector) SelectCvss(List<OsvSeverity> severities)
     {
-        // Prefer CVSS_V3, fall back to V4/V2
-        var entry = severities.FirstOrDefault(s => s.Type == "CVSS_V3")
-                    ?? severities.FirstOrDefault(s => s.Type == "CVSS_V4")
-                    ?? severities.FirstOrDefault(s => s.Type == "CVSS_V2")
-                    ?? severities.FirstOrDefault();
+        var parsed = severities
+            .Where(s => !string.IsNullOrWhiteSpace(s.Score))
+            .Select(s => (Entry: s, Result: CvssCalculator.Parse(s.Score)))
+            .ToList();
 
-        if (entry?.Score is null) return null;
+        var best = parsed.Where(p => p.Result is { Version: "3.1" or "3.0" }).Select(p => p.Result)
+                       .OrderByDescending(r => r!.Version).FirstOrDefault()
+                   ?? parsed.Select(p => p.Result).FirstOrDefault(r => r is { Version: "2.0" })
+                   ?? parsed.Select(p => p.Result).FirstOrDefault(r => r is { Version: "4.0" });
+        if (best is not null) return (best.Score, best.Vector);
 
-        // OSV CVSS "score" is typically a vector string; compute base from impact metrics.
-        // We do not implement a full CVSS calculator here; return a conservative estimate
-            // using vector flags so callers get a reasonable severity bucket.
-        return EstimateCvssFromVector(entry.Score);
-    }
-
-    private static double? EstimateCvssFromVector(string vector)
-    {
-        // If the score is already a numeric value, use it directly
-        if (double.TryParse(vector, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var direct))
+        // Some sources put a plain number where the vector should be.
+        foreach (var s in severities)
         {
-            return Math.Clamp(direct, 0, 10);
+            if (double.TryParse(s.Score, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var direct))
+                return (Math.Clamp(direct, 0, 10), null);
         }
 
-        // Otherwise approximate from impact metrics in the vector string
-        var hasHighImpact = vector.Contains("C:H") || vector.Contains("I:H") || vector.Contains("A:H");
-        var hasLowImpact = vector.Contains("C:L") || vector.Contains("I:L") || vector.Contains("A:L");
-        var networkAttack = vector.Contains("AV:N");
-        var noPrivs = vector.Contains("PR:N");
-
-        if (hasHighImpact && networkAttack && noPrivs) return 9.0;
-        if (hasHighImpact) return 7.5;
-        if (hasLowImpact) return 5.0;
-        return 3.5;
+        return (null, null);
     }
 
     private static VulnerabilitySeverity MapSeverity(double? cvss, OsvVulnerability vuln)
@@ -684,13 +675,19 @@ public sealed partial class DependencyScanner(
         _ => VulnerabilitySeverity.Medium
     };
 
-    private static string? ExtractFixedVersion(List<OsvAffected> affected, string packageName)
+    /// <summary>
+    /// The version that fixes this advisory <i>for the installed version</i>. An advisory often lists a separate range
+    /// (and fix) per release line, so the range containing the installed version decides — not whichever fix is
+    /// listed first.
+    /// </summary>
+    private static string? ResolveFixedVersion(List<OsvAffected> affected, string osvEcosystem, DependencyInfo dep)
     {
-        var match = affected.FirstOrDefault(a =>
-            a.Package.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase));
-        if (match is null) match = affected.FirstOrDefault();
+        var resolution = OsvFixResolver.Resolve(affected, osvEcosystem, dep.Name, dep.Version);
+        if (resolution.PackageMatched) return resolution.FixedVersion;
 
-        return match?.Ranges
+        // The advisory names the package differently from the manifest (for example a Maven group:artifact id), so
+        // there is nothing to match the installed version against. Fall back to the first fix it lists.
+        return affected.FirstOrDefault()?.Ranges
             .SelectMany(r => r.Events)
             .FirstOrDefault(e => !string.IsNullOrEmpty(e.Fixed))?.Fixed;
     }

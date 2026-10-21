@@ -20,6 +20,7 @@ public sealed class ScanProcessor(
     IDependencyScanner dependencyScanner,
     IEmailService emailService,
     CredentialVault vault,
+    IIntelTrigger intelTrigger,
     ILogger<ScanProcessor> logger) : IScanProcessor
 {
     private static readonly string[] DependencyFilePatterns =
@@ -358,6 +359,10 @@ public sealed class ScanProcessor(
         scanRun.LowCount = low;
         scanRun.ErrorLog = errorLog;
         await dbContext.SaveChangesAsync(ct);
+
+        // Ask the background refresher to look up the CVEs this scan found (CVSS, dates, fixes, KEV, EPSS). It runs
+        // separately so a slow external source never delays a scan.
+        intelTrigger.Request();
 
         // Send email notification if enabled
         try

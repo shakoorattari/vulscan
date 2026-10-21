@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+using Vulscan.Application.Common;
 using Vulscan.Application.DTOs.Common;
 using Vulscan.Domain.Entities;
 using Vulscan.Infrastructure.Data;
@@ -76,17 +77,14 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
         }
         else
         {
-            // Get latest scan only
-            var latestScanId = await db.ScanRuns
-                .Where(s => s.Sboms.Any(sb => sb.RepositoryId == repositoryId))
-                .OrderByDescending(s => s.StartedAt)
-                .Select(s => s.Id)
+            // The current scan of the repository's project (its latest completed one) — not a scan that is still
+            // running, and not every scan the repository has ever been part of.
+            var projectId = await db.Repositories
+                .Where(r => r.Id == repositoryId)
+                .Select(r => r.ProjectId)
                 .FirstOrDefaultAsync();
-
-            if (latestScanId != Guid.Empty)
-            {
-                query = query.Where(p => p.ScanRunId == latestScanId);
-            }
+            var currentScanId = await CurrentScans.IdForProjectAsync(db, projectId) ?? Guid.Empty;
+            query = query.Where(p => p.ScanRunId == currentScanId);
         }
 
         var packages = await query
@@ -110,6 +108,11 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
         if (scanRunId.HasValue)
         {
             query = query.Where(p => p.ScanRunId == scanRunId.Value);
+        }
+        else
+        {
+            var currentScanIds = await CurrentScans.IdsAsync(db);
+            query = query.Where(p => currentScanIds.Contains(p.ScanRunId));
         }
 
         var packages = await query
@@ -143,13 +146,26 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
         [FromQuery] string? ecosystem = null,
         [FromQuery] bool? hasVulnerabilities = null)
     {
-        // If no scanRunId provided, default to the latest scan run.
-        if (!scanRunId.HasValue && !repositoryId.HasValue && !projectId.HasValue)
+        // Without an explicit scan, show each project's current scan (its latest completed one). Every scan is kept,
+        // but listing them all would repeat the same package once per scan, and a scan still running would show a
+        // partial inventory. When the view is a single project or repository there is exactly one scan, and it is
+        // reported back as scanRunId so the per-scan CSV/SBOM exports work.
+        List<Guid>? currentScanIds = null;
+        if (!scanRunId.HasValue)
         {
-            scanRunId = await db.ScanRuns
-                .OrderByDescending(s => s.StartedAt)
-                .Select(s => (Guid?)s.Id)
-                .FirstOrDefaultAsync();
+            var scopeProjectId = projectId;
+            if (!scopeProjectId.HasValue && repositoryId.HasValue)
+            {
+                scopeProjectId = await db.Repositories
+                    .Where(r => r.Id == repositoryId.Value)
+                    .Select(r => (Guid?)r.ProjectId)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (scopeProjectId.HasValue)
+                scanRunId = await CurrentScans.IdForProjectAsync(db, scopeProjectId.Value) ?? Guid.Empty;
+            else
+                currentScanIds = await CurrentScans.IdsAsync(db);
         }
 
         var query = db.DiscoveredPackages
@@ -158,6 +174,7 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
             .AsQueryable();
 
         if (scanRunId.HasValue) query = query.Where(p => p.ScanRunId == scanRunId.Value);
+        else if (currentScanIds is not null) query = query.Where(p => currentScanIds.Contains(p.ScanRunId));
         if (repositoryId.HasValue) query = query.Where(p => p.RepositoryId == repositoryId.Value);
         if (projectId.HasValue) query = query.Where(p => p.Repository.ProjectId == projectId.Value);
         if (!string.IsNullOrWhiteSpace(ecosystem)) query = query.Where(p => p.Ecosystem == ecosystem);
@@ -258,7 +275,7 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
 
         return Ok(ApiResponse<object>.Ok(new
         {
-            scanRunId,
+            scanRunId = scanRunId == Guid.Empty ? null : scanRunId,
             repositoryId,
             projectId,
             totalPackages = enriched.Count,
@@ -269,12 +286,15 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
     }
 
     /// <summary>
-    /// Get package statistics across all scans.
+    /// Package statistics for each project's current scan. <c>totalScans</c> is the size of the scan history.
     /// </summary>
     [HttpGet("stats")]
     public async Task<IActionResult> GetPackageStats()
     {
-        var stats = await db.DiscoveredPackages
+        var currentScanIds = await CurrentScans.IdsAsync(db);
+        var current = db.DiscoveredPackages.Where(p => currentScanIds.Contains(p.ScanRunId));
+
+        var stats = await current
             .GroupBy(p => p.Ecosystem)
             .Select(g => new
             {
@@ -286,8 +306,8 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
             .ToListAsync();
 
         var totalScans = await db.ScanRuns.CountAsync();
-        var totalPackages = await db.DiscoveredPackages.CountAsync();
-        var vulnerablePackages = await db.DiscoveredPackages.CountAsync(p => p.HasVulnerabilities);
+        var totalPackages = await current.CountAsync();
+        var vulnerablePackages = await current.CountAsync(p => p.HasVulnerabilities);
 
         return Ok(new
         {

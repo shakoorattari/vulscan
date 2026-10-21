@@ -432,6 +432,11 @@
   font-weight: 600;
 }
 
+.no-vulns-card.neutral {
+  background: var(--neutral-100);
+  color: var(--neutral-700);
+}
+
 .no-vulns-card mat-icon {
   font-size: 1.25rem;
   width: 1.25rem;

@@ -5,10 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Vulscan.Application.Interfaces;
 using Vulscan.Infrastructure.BackgroundServices;
 using Vulscan.Infrastructure.Clients;
 using Vulscan.Infrastructure.Data;
+using Vulscan.Infrastructure.Intel;
 using Vulscan.Infrastructure.Security;
 using Vulscan.Infrastructure.Services;
 
@@ -60,7 +63,11 @@ public static class DependencyInjection
         // Authentication & access control
         services.AddSingleton(configuration.GetSection("Auth").Get<AuthOptions>() ?? new AuthOptions());
         services.TryAddSingleton(TimeProvider.System);
-        services.AddSingleton<IEntraTokenValidator, EntraTokenValidator>();
+        services.AddHttpClient("entra-metadata").UseOutboundProxy(configuration);
+        services.AddSingleton<IEntraTokenValidator>(sp => new EntraTokenValidator(
+            sp.GetRequiredService<AuthOptions>(),
+            sp.GetRequiredService<ILogger<EntraTokenValidator>>(),
+            () => sp.GetRequiredService<IHttpClientFactory>().CreateClient("entra-metadata")));
         services.AddScoped<ISmtpConfigurationService, SmtpConfigurationService>();
         services.AddScoped<IEmailService, EmailService>();
 
@@ -83,7 +90,9 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.Add("User-Agent", "Vulscan/1.0");
             client.Timeout = TimeSpan.FromSeconds(
                 configuration.GetValue("VulnerabilityScanning:OSV:TimeoutSeconds", 30));
-        });
+        }).UseOutboundProxy(configuration);
+
+        AddVulnerabilityIntelligence(services, configuration);
 
         // Memory cache for OSV lookups (Phase 2)
         services.AddMemoryCache(options =>
@@ -109,9 +118,57 @@ public static class DependencyInjection
 
             // Removal of unused access
             services.AddHostedService<DormantAccountSweeper>();
+
+            // Fills in CVE details (CVSS, dates, fixes, references, KEV, EPSS) for what the scans find
+            services.AddHostedService<IntelBackgroundWorker>();
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// OSV details, NVD, FIRST EPSS and the CISA KEV catalog. All outbound calls go through <c>Network:ProxyUrl</c>
+    /// when one is configured. See docs/VULNERABILITY_INTELLIGENCE.md.
+    /// </summary>
+    private static void AddVulnerabilityIntelligence(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<IntelOptions>(configuration.GetSection(IntelOptions.SectionName));
+
+        static Uri BaseUri(string url) => new(url.EndsWith('/') ? url : url + "/");
+
+        // One process-wide limiter: NVD's allowance is per caller, not per request.
+        services.AddSingleton<NvdRateLimiter>();
+        services.AddHttpClient<INvdApiClient, NvdApiClient>((sp, client) =>
+        {
+            var nvd = sp.GetRequiredService<IOptions<IntelOptions>>().Value.Nvd;
+            client.BaseAddress = BaseUri(nvd.BaseUrl);
+            client.DefaultRequestHeaders.Add("User-Agent", "Vulscan/1.0");
+            client.Timeout = TimeSpan.FromSeconds(nvd.TimeoutSeconds);
+        }).UseOutboundProxy(configuration);
+
+        services.AddHttpClient<IEpssApiClient, EpssApiClient>((sp, client) =>
+        {
+            var epss = sp.GetRequiredService<IOptions<IntelOptions>>().Value.Epss;
+            client.BaseAddress = BaseUri(epss.BaseUrl);
+            client.DefaultRequestHeaders.Add("User-Agent", "Vulscan/1.0");
+            client.Timeout = TimeSpan.FromSeconds(epss.TimeoutSeconds);
+        }).UseOutboundProxy(configuration);
+
+        // The KEV catalog is cached in the client instance, so the client itself is a singleton.
+        services.AddHttpClient(KevCatalogClient.HttpClientName, (sp, client) =>
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", "Vulscan/1.0");
+            client.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<IntelOptions>>().Value.Kev.TimeoutSeconds);
+        }).UseOutboundProxy(configuration);
+        services.AddSingleton<IKevCatalogClient, KevCatalogClient>();
+
+        services.AddScoped<VulnerabilityIntelService>();
+        services.AddScoped<IVulnerabilityIntelService>(sp => sp.GetRequiredService<VulnerabilityIntelService>());
+        services.AddScoped<IntelRefresher>();
+
+        // Registered even when background jobs are off: the scan pipeline calls it.
+        services.AddSingleton<IntelTrigger>();
+        services.AddSingleton<IIntelTrigger>(sp => sp.GetRequiredService<IntelTrigger>());
     }
 
     /// <summary>

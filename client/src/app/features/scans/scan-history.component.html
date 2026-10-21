@@ -146,7 +146,17 @@
                   <span class="vuln-title">Vulnerability Summary</span>
                 </div>
                 <div class="vuln-grid">
-                  @if (scan.totalVulnerabilities === 0) {
+                  @if (scan.status === 'Queued' || scan.status === 'Running') {
+                    <div class="no-vulns-card neutral">
+                      <mat-icon>hourglass_top</mat-icon>
+                      <span>Scan in progress — results appear when it completes</span>
+                    </div>
+                  } @else if (scan.status !== 'Completed') {
+                    <div class="no-vulns-card neutral">
+                      <mat-icon>info</mat-icon>
+                      <span>No results — the scan did not complete</span>
+                    </div>
+                  } @else if (scan.totalVulnerabilities === 0) {
                     <div class="no-vulns-card">
                       <mat-icon>verified</mat-icon>
                       <span>No vulnerabilities found</span>

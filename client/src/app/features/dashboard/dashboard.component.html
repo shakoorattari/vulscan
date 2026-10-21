@@ -12,6 +12,23 @@
           <mat-spinner diameter="48"></mat-spinner>
         </div>
       } @else if (summary()) {
+        <!-- A running scan never replaces the figures below; say so rather than leave people guessing -->
+        @if (summary()!.scansInProgress > 0) {
+          <div class="scan-banner" role="status">
+            <mat-icon>sync</mat-icon>
+            <span>
+              {{ summary()!.scansInProgress }}
+              {{ summary()!.scansInProgress === 1 ? 'project is' : 'projects are' }} being scanned. Until a scan
+              finishes, its project keeps showing the results of its last completed scan.
+            </span>
+          </div>
+        }
+        @if (summary()!.resultsAsOf) {
+          <p class="results-as-of">Results as of {{ summary()!.resultsAsOf | date: 'MMM d, y, h:mm a' }}</p>
+        } @else {
+          <p class="results-as-of">No scan has completed yet, so there are no results to show.</p>
+        }
+
         <!-- KPI Cards -->
         <div class="kpi-grid">
           <mat-card class="kpi-card critical">
@@ -107,7 +124,12 @@
                 <span class="kpi-value status" [class]="summary()!.lastScanStatus?.toLowerCase() ?? ''">
                   {{ summary()!.lastScanStatus ?? 'N/A' }}
                 </span>
-                <span class="kpi-label">Last Scan</span>
+                <span class="kpi-label">
+                  Last Scan
+                  @if (summary()!.lastScanDate) {
+                    · {{ summary()!.lastScanDate | date: 'MMM d, h:mm a' }}
+                  }
+                </span>
               </div>
             </mat-card-content>
           </mat-card>
@@ -140,11 +162,11 @@
                   </ng-container>
                   <ng-container matColumnDef="repos">
                     <th mat-header-cell *matHeaderCellDef>Repos</th>
-                    <td mat-cell *matCellDef="let scan">{{ scan.reposScanned }}</td>
+                    <td mat-cell *matCellDef="let scan">{{ scan.status === 'Completed' ? scan.reposScanned : '—' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="vulns">
                     <th mat-header-cell *matHeaderCellDef>Vulns</th>
-                    <td mat-cell *matCellDef="let scan">{{ scan.totalVulnerabilities }}</td>
+                    <td mat-cell *matCellDef="let scan">{{ scan.status === 'Completed' ? scan.totalVulnerabilities : '—' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="triggeredBy">
                     <th mat-header-cell *matHeaderCellDef>By</th>

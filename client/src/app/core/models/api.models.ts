@@ -110,8 +110,13 @@ export interface DashboardSummary {
   mediumCount: number;
   lowCount: number;
   negligibleCount: number;
+  /** When the most recent scan finished (completed/failed/cancelled). A running scan does not count. */
   lastScanDate?: string;
   lastScanStatus?: string;
+  /** When the scans behind the counts finished. Absent when nothing has completed yet. */
+  resultsAsOf?: string;
+  /** Projects with a scan queued or running; the counts still show their previous completed scan. */
+  scansInProgress: number;
   recentScans: RecentScan[];
   topVulnerableRepos: TopVulnerableRepo[];
 }
@@ -249,8 +254,12 @@ export interface ProjectDto {
   lastScannedAt?: string;
   totalScans: number;
   lastScanId?: string;
+  /** Status of the newest scan (so Running/Failed are visible). The counts below are from the last *completed* scan. */
   lastScanStatus?: string;
   lastScanDurationSeconds?: number;
+  /** When the scan behind the counts finished. Absent means no completed scan yet — not "clean". */
+  resultsAsOf?: string;
+  scanInProgress: boolean;
   lastScanCriticalCount: number;
   lastScanHighCount: number;
   lastScanMediumCount: number;
@@ -334,6 +343,7 @@ export interface ExecutiveSummaryReport {
   lowCount: number;
   lastScanDate?: string;
   lastScanDurationSeconds?: number;
+  scansInProgress: number;
   ecosystemBreakdown: EcosystemBreakdown[];
   projectSummaries: ProjectSummary[];
   severityTrend: SeverityTrend[];
@@ -356,6 +366,9 @@ export interface ProjectSummary {
   highCount: number;
   mediumCount: number;
   lowCount: number;
+  /** When the scan behind these figures finished; absent means no completed scan yet. */
+  lastScanAt?: string;
+  scanInProgress: boolean;
 }
 
 export interface ProjectDetailReport {
@@ -364,6 +377,8 @@ export interface ProjectDetailReport {
   generatedAt: string;
   /** When the scan this report reflects finished; absent if the project was never scanned. */
   lastScanAt?: string;
+  /** A newer scan is queued or running; this report still shows the previous completed one. */
+  scanInProgress: boolean;
   totalRepositories: number;
   totalPackages: number;
   /** Raw finding rows (a package declared in two manifests counts twice). */
@@ -404,6 +419,12 @@ export interface ReportVulnerability {
   occurrences: number;
   /** Manifest/lock files in the repository that declare this package version. */
   sourceFiles: string[];
+  /** Listed in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is confirmed. */
+  kev: boolean;
+  kevDueDate?: string;
+  /** Probability (0–1) of exploitation in the next 30 days (FIRST EPSS); absent if not scored. */
+  epss?: number;
+  epssPercentile?: number;
 }
 
 export interface ReportPackage {
@@ -447,6 +468,8 @@ export interface VulnerabilitySummaryItem {
   affectedRepositories: number;
   totalOccurrences: number;
   fixedVersion?: string;
+  kev: boolean;
+  epss?: number;
 }
 
 export interface SeverityTrend {
@@ -560,4 +583,105 @@ export interface ProjectConfigurationDto {
   totalRepositories: number;
   totalConfiguredBranches: number;
   enabledRepositories: number;
+}
+
+
+// ── Vulnerability intelligence (OSV · NVD · FIRST EPSS · CISA KEV) ────────
+
+export interface VulnerabilityIntel {
+  id: string;
+  title?: string;
+  description?: string;
+  /** "markdown" for GitHub/OSV text, "text" for NVD descriptions. */
+  descriptionFormat: 'markdown' | 'text';
+  descriptionSource?: string;
+  published?: string;
+  modified?: string;
+  withdrawn?: string;
+  aliases: string[];
+  severity?: string;
+  score?: number;
+  vendorSeverity?: string;
+  cvss: IntelCvss[];
+  weaknesses: IntelWeakness[];
+  epss?: IntelEpss;
+  kev?: IntelKev;
+  references: IntelReference[];
+  affected: IntelAffectedPackage[];
+  products: IntelProduct[];
+  sources: IntelSource[];
+  fetchedAt: string;
+  /** The record is past its refresh time and a refresh is pending or failed. */
+  stale: boolean;
+}
+
+export interface IntelCvss {
+  version: string;
+  vector: string;
+  score?: number;
+  severity?: string;
+  source: string;
+  isPrimary: boolean;
+  metrics: { code: string; name: string; value: string }[];
+}
+
+export interface IntelWeakness {
+  id: string;
+  url?: string;
+  sources: string[];
+}
+
+export interface IntelEpss {
+  score: number;
+  percentile: number;
+  date?: string;
+}
+
+export interface IntelKev {
+  name?: string;
+  vendorProject?: string;
+  product?: string;
+  shortDescription?: string;
+  dateAdded?: string;
+  dueDate?: string;
+  requiredAction?: string;
+  ransomwareUse?: string;
+  notes?: string;
+}
+
+export interface IntelReference {
+  url: string;
+  host: string;
+  /** fix, advisory, exploit, issue, package, article, other — most useful first. */
+  kinds: string[];
+  labels: string[];
+  sources: string[];
+}
+
+export interface IntelAffectedPackage {
+  ecosystem: string;
+  name: string;
+  purl?: string;
+  ranges: { introduced?: string; fixed?: string; lastAffected?: string }[];
+  versionsListed: number;
+}
+
+export interface IntelProduct {
+  vendor: string;
+  product: string;
+  version?: string;
+  startIncluding?: string;
+  startExcluding?: string;
+  endIncluding?: string;
+  endExcluding?: string;
+}
+
+export interface IntelSource {
+  name: string;
+  /** ok, not_found, not_applicable, disabled — or error / skipped, which are retried soon. */
+  status: string;
+  fetchedAt?: string;
+  message?: string;
+  url?: string;
+  modified?: string;
 }

@@ -192,6 +192,32 @@ import { DashboardSummary, RecentScan, TopVulnerableRepo } from '../../core/mode
       vertical-align: middle;
     }
 
+    .scan-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--status-info-bg);
+      color: var(--status-info);
+      font-size: 14px;
+    }
+    .scan-banner mat-icon {
+      flex: none;
+      animation: spin 1.6s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .results-as-of {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: var(--neutral-700);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scan-banner mat-icon { animation: none; }
+    }
     @media (max-width: 1200px) {
       .kpi-grid {
         grid-template-columns: repeat(2, 1fr);

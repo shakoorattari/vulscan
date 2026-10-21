@@ -279,3 +279,20 @@ $sev: (
   .detail { grid-template-columns: minmax(0, 1fr); padding-left: 24px; }
   .nested { margin-left: 24px; width: calc(100% - 48px); }
 }
+
+// ── Known exploited (CISA KEV) ───────────────────────────────────
+.kev-stat .stat-value { color: var(--sev-critical); }
+.kev-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; cursor: help;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; background: var(--sev-critical); color: #fff;
+}
+.kev-toggle {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--neutral-900);
+  background: var(--surface-card); border: 1px solid var(--neutral-300); border-radius: 999px;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--sev-critical); }
+  &:hover:not(:disabled) { border-color: var(--neutral-500); }
+  &:disabled { opacity: 0.45; cursor: default; }
+  &:focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 2px; }
+  &.on { background: var(--sev-critical-bg); color: var(--sev-critical); border-color: var(--sev-critical); font-weight: 600; }
+}

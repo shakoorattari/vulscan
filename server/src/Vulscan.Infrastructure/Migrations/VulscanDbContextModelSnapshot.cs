@@ -918,6 +918,84 @@ namespace Vulscan.Infrastructure.Migrations
                     b.ToTable("Vulnerabilities", "vulscan");
                 });
 
+            modelBuilder.Entity("Vulscan.Domain.Entities.VulnerabilityIntel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdvisoryId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double?>("CvssScore")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EpssDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double?>("EpssPercentile")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("EpssScore")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("FetchedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("KevDateAdded")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("KevDueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("KevListed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("Modified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Published")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RefreshAfter")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Severity")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdvisoryId")
+                        .IsUnique();
+
+                    b.HasIndex("KevListed");
+
+                    b.HasIndex("RefreshAfter");
+
+                    b.ToTable("VulnerabilityIntel", "vulscan");
+                });
+
             modelBuilder.Entity("Vulscan.Domain.Entities.DiscoveredPackage", b =>
                 {
                     b.HasOne("Vulscan.Domain.Entities.Repository", "Repository")

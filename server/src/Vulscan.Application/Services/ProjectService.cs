@@ -246,7 +246,10 @@ public sealed class ProjectService(DbContext dbContext, CredentialVault vault) :
 
     private static ProjectDto MapToDto(Project p, string globalCron)
     {
-        var lastScan = p.ScanRuns?.MaxBy(s => s.StartedAt);
+        var scans = p.ScanRuns ?? [];
+        var newestScan = scans.MaxBy(s => s.StartedAt);
+        var lastScan = scans.Where(s => s.Status == ScanStatus.Completed)
+            .MaxBy(s => (s.CompletedAt ?? s.StartedAt, s.Id));
         return new ProjectDto
         {
             Id = p.Id,
@@ -261,12 +264,14 @@ public sealed class ProjectService(DbContext dbContext, CredentialVault vault) :
             CronExpression = p.CronExpression,
             EffectiveCron = p.CronExpression ?? globalCron,
             CreatedAt = p.CreatedAt,
-            LastScannedAt = p.LastScannedAt ?? lastScan?.StartedAt,
+            LastScannedAt = p.LastScannedAt ?? newestScan?.StartedAt,
             RepositoryCount = p.Repositories?.Count ?? 0,
-            TotalScans = p.ScanRuns?.Count ?? 0,
-            TotalVulnerabilities = p.ScanRuns?.Sum(s => s.TotalVulnerabilities) ?? 0,
+            TotalScans = scans.Count,
+            TotalVulnerabilities = lastScan?.TotalVulnerabilities ?? 0,
             LastScanId = lastScan?.Id,
-            LastScanStatus = lastScan?.Status.ToString(),
+            LastScanStatus = newestScan?.Status.ToString(),
+            ResultsAsOf = lastScan?.CompletedAt ?? lastScan?.StartedAt,
+            ScanInProgress = scans.Any(s => s.Status is ScanStatus.Queued or ScanStatus.Running),
             LastScanDurationSeconds = lastScan?.DurationSeconds,
             LastScanCriticalCount = lastScan?.CriticalCount ?? 0,
             LastScanHighCount = lastScan?.HighCount ?? 0,

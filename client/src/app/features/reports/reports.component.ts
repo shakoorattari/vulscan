@@ -129,6 +129,18 @@ import { ApiService } from '../../core/services/api.service';
     .vulnerable-row { background: rgba(255,235,238,0.3); }
 
     .no-data { text-align: center; padding: 24px; color: rgba(0,0,0,0.38); }
+    .scan-banner {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 16px;
+      border-radius: var(--radius-sm); background: var(--status-info-bg); color: var(--status-info); font-size: 14px;
+    }
+    .scan-chip {
+      display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 8px;
+      border-radius: 999px; font-size: 11px; font-weight: 600;
+      background: var(--status-info-bg); color: var(--status-info);
+    }
+    .scan-chip mat-icon, .scan-banner mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .scan-banner mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .no-results { color: rgba(0,0,0,0.45); }
     .error-card { text-align: center; color: #c62828; }
     .error-card mat-icon { margin-right: 8px; vertical-align: middle; }
 
@@ -170,6 +182,7 @@ export class ReportsComponent implements OnInit {
 
   readonly totalProjects = signal(0);
   readonly vulnerableProjects = signal(0);
+  readonly scansInProgress = signal(0);
   readonly uniqueCves = signal(0);
 
   readonly projectColumns = [
@@ -216,7 +229,8 @@ export class ReportsComponent implements OnInit {
         this.filteredProjects.set(all.filter(p => p.totalVulnerabilities > 0));
         break;
       case 'clean':
-        this.filteredProjects.set(all.filter(p => p.totalVulnerabilities === 0));
+        // "Clean" needs a completed scan: a project with no results yet is not clean, it is unknown.
+        this.filteredProjects.set(all.filter(p => p.totalVulnerabilities === 0 && !!p.lastScanAt));
         break;
       default:
         this.filteredProjects.set([...all]);
@@ -290,6 +304,7 @@ export class ReportsComponent implements OnInit {
           this.ecosystemBreakdown.set(d.ecosystemBreakdown);
           this.trends.set(d.severityTrend);
           this.totalProjects.set(d.totalProjects);
+          this.scansInProgress.set(d.scansInProgress);
           this.vulnerableProjects.set(
             d.projectSummaries.filter(p => p.totalVulnerabilities > 0).length,
           );

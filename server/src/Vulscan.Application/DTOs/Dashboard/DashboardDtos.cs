@@ -10,8 +10,16 @@ public sealed record DashboardSummaryDto
     public int MediumCount { get; init; }
     public int LowCount { get; init; }
     public int NegligibleCount { get; init; }
+
+    /// <summary>When the most recent scan <i>finished</i> (completed, failed or cancelled). A running scan does not count.</summary>
     public DateTime? LastScanDate { get; init; }
     public string? LastScanStatus { get; init; }
+
+    /// <summary>When the scans behind the counts above finished: the newest of each project's last completed scan.</summary>
+    public DateTime? ResultsAsOf { get; init; }
+
+    /// <summary>Projects with a scan queued or running. The counts above still show their previous completed scan.</summary>
+    public int ScansInProgress { get; init; }
     public List<RecentScanDto> RecentScans { get; init; } = [];
     public List<TopVulnerableRepoDto> TopVulnerableRepos { get; init; } = [];
 }

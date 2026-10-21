@@ -11,17 +11,19 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProjectDetailReport, ReportVulnerability } from '../../core/models/api.models';
 import { ApiService } from '../../core/services/api.service';
+import { compareVersions } from '../../shared/version-compare';
+import { formatEpss } from './intel/intel-format';
 
 type ViewMode = 'cve' | 'package';
-type SortKey = 'severity' | 'cve' | 'package' | 'repo' | 'cvss' | 'age' | 'count';
+type SortKey = 'severity' | 'cve' | 'package' | 'repo' | 'cvss' | 'epss' | 'age' | 'count';
 type FixState = 'none' | 'ok' | 'other-line';
 
 const ALL = 'all';
 const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
 const RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, negligible: 0 };
-const CVE_SORTS: SortKey[] = ['severity', 'cve', 'package', 'repo', 'cvss', 'age'];
+const CVE_SORTS: SortKey[] = ['severity', 'cve', 'package', 'repo', 'cvss', 'epss', 'age'];
 const PACKAGE_SORTS: SortKey[] = ['severity', 'package', 'repo', 'cvss', 'count'];
-const DESC_FIRST: SortKey[] = ['severity', 'cvss', 'age', 'count'];
+const DESC_FIRST: SortKey[] = ['severity', 'cvss', 'epss', 'age', 'count'];
 
 interface Finding extends ReportVulnerability {
   repoId: string;
@@ -43,6 +45,7 @@ interface PackageGroup {
   upgradeTo: string | null;
   unfixed: number;
   repoNames: string[];
+  kev: boolean;
 }
 
 interface RailItem {
@@ -52,33 +55,6 @@ interface RailItem {
   packages: number;
   vulnerablePackages: number;
   counts: Record<string, number>;
-}
-
-/** Numeric-aware dotted version comparison. A pre-release tag sorts below the release it precedes. */
-export function compareVersions(a: string, b: string): number {
-  const split = (v: string) => v.trim().replace(/^v/i, '').split(/[.\-+_]/);
-  const pa = split(a);
-  const pb = split(b);
-  const isNum = (s: string) => /^\d+$/.test(s);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const x = pa[i];
-    const y = pb[i];
-    if (x === undefined) {
-      if (isNum(y) && Number(y) === 0) continue;
-      return isNum(y) ? -1 : 1;
-    }
-    if (y === undefined) {
-      if (isNum(x) && Number(x) === 0) continue;
-      return isNum(x) ? 1 : -1;
-    }
-    if (isNum(x) && isNum(y)) {
-      const d = Number(x) - Number(y);
-      if (d !== 0) return d;
-    } else if (x !== y) {
-      return x.localeCompare(y, undefined, { numeric: true });
-    }
-  }
-  return 0;
 }
 
 @Component({
@@ -111,6 +87,7 @@ export class ProjectDetailComponent implements OnInit {
   readonly view = signal<ViewMode>('cve');
   readonly query = signal('');
   readonly fixableOnly = signal(false);
+  readonly kevOnly = signal(false);
   readonly selectedSeverities = signal<ReadonlySet<string>>(new Set());
   readonly sort = signal<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'severity', dir: 'desc' });
   readonly pageIndex = signal(0);
@@ -172,6 +149,10 @@ export class ProjectDetailComponent implements OnInit {
 
   readonly projectCounts = computed(() => this.rail()[0]?.counts ?? {});
 
+  /** Findings in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is confirmed. */
+  readonly kevTotal = computed(() => this.allFindings().filter((f) => f.kev).length);
+  readonly kevInScope = computed(() => this.inScope().filter((f) => f.kev).length);
+
   /** The four standard severities, plus Negligible only when the scan actually produced some. */
   readonly chipSeverities = computed<string[]>(() =>
     this.projectCounts()['negligible'] ? [...SEVERITIES, 'negligible'] : [...SEVERITIES],
@@ -194,8 +175,10 @@ export class ProjectDetailComponent implements OnInit {
   private readonly searched = computed(() => {
     const q = this.query().trim().toLowerCase();
     const fixable = this.fixableOnly();
+    const kevOnly = this.kevOnly();
     return this.inScope().filter((f) => {
       if (fixable && f.fix !== 'ok') return false;
+      if (kevOnly && !f.kev) return false;
       if (!q) return true;
       return (
         f.cveId.toLowerCase().includes(q) ||
@@ -226,8 +209,10 @@ export class ProjectDetailComponent implements OnInit {
         case 'package': return a.packageName.localeCompare(b.packageName) || compareVersions(a.installedVersion, b.installedVersion);
         case 'repo': return a.repoName.localeCompare(b.repoName);
         case 'cvss': return (a.cvssScore ?? -1) - (b.cvssScore ?? -1);
+        case 'epss': return (a.epss ?? -1) - (b.epss ?? -1);
         case 'age': return a.ageDays - b.ageDays;
-        default: return a.rank - b.rank || (a.cvssScore ?? -1) - (b.cvssScore ?? -1);
+        // Within a severity, what is being exploited comes first, then the higher score.
+        default: return a.rank - b.rank || Number(a.kev) - Number(b.kev) || (a.cvssScore ?? -1) - (b.cvssScore ?? -1);
       }
     };
     return [...this.filtered()].sort(
@@ -250,13 +235,14 @@ export class ProjectDetailComponent implements OnInit {
         name: findings[0].packageName,
         version: findings[0].installedVersion,
         ecosystem: findings.find((f) => f.ecosystem)?.ecosystem,
-        findings: [...findings].sort((a, b) => b.rank - a.rank || (b.cvssScore ?? -1) - (a.cvssScore ?? -1)),
+        findings: [...findings].sort((a, b) => b.rank - a.rank || Number(b.kev) - Number(a.kev) || (b.cvssScore ?? -1) - (a.cvssScore ?? -1)),
         sev: worst.sev,
         rank: worst.rank,
         maxCvss: scores.length ? Math.max(...scores) : null,
         upgradeTo: fixes.length ? fixes.reduce((a, b) => (compareVersions(b, a) > 0 ? b : a)) : null,
         unfixed: findings.filter((f) => f.fix !== 'ok').length,
         repoNames: [...new Set(findings.map((f) => f.repoName))].sort(),
+        kev: findings.some((f) => f.kev),
       };
     });
     const { key, dir } = this.sort();
@@ -267,7 +253,7 @@ export class ProjectDetailComponent implements OnInit {
         case 'repo': return (a.repoNames[0] ?? '').localeCompare(b.repoNames[0] ?? '');
         case 'cvss': return (a.maxCvss ?? -1) - (b.maxCvss ?? -1);
         case 'count': return a.findings.length - b.findings.length;
-        default: return a.rank - b.rank || a.findings.length - b.findings.length;
+        default: return a.rank - b.rank || Number(a.kev) - Number(b.kev) || a.findings.length - b.findings.length;
       }
     };
     return groups.sort((a, b) => sign * cmp(a, b) || a.name.localeCompare(b.name));
@@ -281,7 +267,7 @@ export class ProjectDetailComponent implements OnInit {
   readonly pagedGroups = computed(() => this.slice(this.groups()));
 
   readonly filtersActive = computed(
-    () => !!this.query().trim() || this.fixableOnly() || this.selectedSeverities().size > 0,
+    () => !!this.query().trim() || this.fixableOnly() || this.kevOnly() || this.selectedSeverities().size > 0,
   );
 
   constructor(
@@ -323,6 +309,12 @@ export class ProjectDetailComponent implements OnInit {
     this.syncUrl();
   }
 
+  toggleKev(): void {
+    this.kevOnly.update((v) => !v);
+    this.resetPaging();
+    this.syncUrl();
+  }
+
   toggleSeverity(sev: string): void {
     this.selectedSeverities.update((cur) => {
       const next = new Set(cur);
@@ -336,6 +328,7 @@ export class ProjectDetailComponent implements OnInit {
   resetFilters(): void {
     this.query.set('');
     this.fixableOnly.set(false);
+    this.kevOnly.set(false);
     this.selectedSeverities.set(new Set());
     this.resetPaging();
     this.syncUrl();
@@ -370,6 +363,10 @@ export class ProjectDetailComponent implements OnInit {
 
   barWidth(item: RailItem, sev: string): number {
     return item.findings ? (item.counts[sev] / item.findings) * 100 : 0;
+  }
+
+  epssLabel(score: number | undefined | null): string {
+    return score == null ? '—' : formatEpss(score);
   }
 
   ageLabel(days: number): string {
@@ -421,6 +418,7 @@ export class ProjectDetailComponent implements OnInit {
     if (p.get('view') === 'package') this.view.set('package');
     this.query.set(p.get('q') ?? '');
     this.fixableOnly.set(p.get('fix') === '1');
+    this.kevOnly.set(p.get('kev') === '1');
     const sevs = (p.get('sev') ?? '').split(',').filter((s) => s in RANK);
     this.selectedSeverities.set(new Set(sevs));
   }
@@ -436,6 +434,7 @@ export class ProjectDetailComponent implements OnInit {
         view: this.view() === 'cve' ? null : this.view(),
         q: this.query().trim() || null,
         fix: this.fixableOnly() ? '1' : null,
+        kev: this.kevOnly() ? '1' : null,
         sev: sev || null,
       },
     });

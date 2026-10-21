@@ -35,6 +35,7 @@ import {
   UpdateScheduleSettingsRequest,
   Vulnerability,
   VulnerabilityDetailReport,
+  VulnerabilityIntel,
   VulnerabilitySummaryItem,
   AuditLogDto,
   AuditLogFilter,
@@ -247,6 +248,15 @@ export class ApiService {
     let params = new HttpParams();
     if (scanRunId) params = params.set('scanRunId', scanRunId);
     return this.http.get<ApiResponse<VulnerabilityDetailReport>>(`${this.baseUrl}/reports/vulnerabilities/${encodeURIComponent(cveId)}`, { params });
+  }
+
+  // ── Vulnerability intelligence ──────────────────────────────────────
+  getVulnerabilityIntel(id: string): Observable<ApiResponse<VulnerabilityIntel>> {
+    return this.http.get<ApiResponse<VulnerabilityIntel>>(`${this.baseUrl}/intel/${encodeURIComponent(id)}`);
+  }
+
+  refreshVulnerabilityIntel(id: string): Observable<ApiResponse<VulnerabilityIntel>> {
+    return this.http.post<ApiResponse<VulnerabilityIntel>>(`${this.baseUrl}/intel/${encodeURIComponent(id)}/refresh`, {});
   }
 
   getSeverityTrends(count = 10): Observable<ApiResponse<SeverityTrend[]>> {

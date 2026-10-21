@@ -57,7 +57,11 @@ public record ProjectDto
     public DateTime? LastScannedAt { get; init; }
 
     public int RepositoryCount { get; init; }
+
+    /// <summary>Number of scans ever run (history).</summary>
     public int TotalScans { get; init; }
+
+    /// <summary>Vulnerabilities in the latest completed scan — not a sum over every scan.</summary>
     public int TotalVulnerabilities { get; init; }
 
     // Owner information
@@ -66,10 +70,17 @@ public record ProjectDto
     public string? CcEmails { get; init; }
     public bool SendEmailNotifications { get; init; }
 
-    // Latest scan snapshot
+    // Scan snapshot. The status is that of the newest scan (so Running/Failed are visible); the id, duration and
+    // counts are those of the latest *completed* scan, so a scan in progress or a failed one never shows as "0".
     public Guid? LastScanId { get; init; }
     public string? LastScanStatus { get; init; }
     public int? LastScanDurationSeconds { get; init; }
+
+    /// <summary>When the scan behind the counts finished; null means the project has no completed scan yet.</summary>
+    public DateTime? ResultsAsOf { get; init; }
+
+    /// <summary>A scan is queued or running right now.</summary>
+    public bool ScanInProgress { get; init; }
     public int LastScanCriticalCount { get; init; }
     public int LastScanHighCount { get; init; }
     public int LastScanMediumCount { get; init; }

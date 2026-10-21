@@ -54,6 +54,13 @@
           </span>
         }
       </div>
+      @if (kevTotal() > 0) {
+        <div class="stat kev-stat">
+          <span class="stat-value">{{ kevTotal() | number }}</span>
+          <span class="stat-label">Known exploited</span>
+          <span class="stat-note" matTooltip="Listed in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is confirmed. Fix these first.">in CISA KEV</span>
+        </div>
+      }
       <div class="sev-summary">
         <div class="sev-bar big" role="img" [attr.aria-label]="'Severity distribution of ' + r.uniqueVulnerabilities + ' findings'">
           @for (s of chipSeverities(); track s) {
@@ -84,7 +91,17 @@
       </div>
     }
 
-    @if (!r.lastScanAt) {
+    @if (r.scanInProgress) {
+      <p class="notice">
+        <mat-icon>sync</mat-icon>
+        @if (r.lastScanAt) {
+          A new scan is running. These are the results of the previous scan, completed
+          {{ r.lastScanAt | date: 'd MMM y, HH:mm' }}.
+        } @else {
+          The first scan of this project is running, so there are no findings to show yet.
+        }
+      </p>
+    } @else if (!r.lastScanAt) {
       <p class="notice">
         <mat-icon>info</mat-icon> This project has no completed scan yet, so there are no findings to show.
       </p>
@@ -203,6 +220,18 @@
             <mat-icon>build_circle</mat-icon> Fix available
           </button>
 
+          <button
+            type="button"
+            class="kev-toggle"
+            [class.on]="kevOnly()"
+            [attr.aria-pressed]="kevOnly()"
+            [disabled]="!kevInScope() && !kevOnly()"
+            (click)="toggleKev()"
+            matTooltip="Only findings CISA lists as exploited in the wild"
+          >
+            <mat-icon>local_fire_department</mat-icon> Known exploited <strong>{{ kevInScope() }}</strong>
+          </button>
+
           @if (filtersActive()) {
             <button type="button" class="reset" (click)="resetFilters()">Reset</button>
           }
@@ -253,6 +282,9 @@
                   <th scope="col" class="num" [attr.aria-sort]="ariaSort('cvss')">
                     <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'cvss', label: 'CVSS' }" />
                   </th>
+                  <th scope="col" class="num" [attr.aria-sort]="ariaSort('epss')" matTooltip="Estimated probability of exploitation in the next 30 days (FIRST EPSS)">
+                    <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'epss', label: 'EPSS' }" />
+                  </th>
                   <th scope="col" class="num" [attr.aria-sort]="ariaSort('age')">
                     <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'age', label: 'Age' }" />
                   </th>
@@ -274,7 +306,12 @@
                       </button>
                     </td>
                     <td><span class="sev-chip" [class]="f.sev">{{ f.sev }}</span></td>
-                    <td><a class="cve-link" [routerLink]="['/reports/vulnerabilities', f.cveId]">{{ f.cveId }}</a></td>
+                    <td>
+                      <a class="cve-link" [routerLink]="['/reports/vulnerabilities', f.cveId]">{{ f.cveId }}</a>
+                      @if (f.kev) {
+                        <span class="kev-tag" matTooltip="Listed in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is confirmed">KEV</span>
+                      }
+                    </td>
                     @if (scope() === 'all') {
                       <td class="repo-cell">{{ f.repoName }}</td>
                     }
@@ -305,12 +342,13 @@
                       }
                     </td>
                     <td class="num">{{ f.cvssScore != null ? f.cvssScore.toFixed(1) : '—' }}</td>
+                    <td class="num">{{ epssLabel(f.epss) }}</td>
                     <td class="num">{{ ageLabel(f.ageDays) }}</td>
                     <td><span class="status-badge" [class]="f.status.toLowerCase()">{{ f.status }}</span></td>
                   </tr>
                   @if (expanded() === f.id) {
                     <tr class="detail-row">
-                      <td [attr.colspan]="scope() === 'all' ? 10 : 9">
+                      <td [attr.colspan]="scope() === 'all' ? 11 : 10">
                         <div class="detail">
                           <div class="detail-main">
                             <h4>Description</h4>
@@ -382,6 +420,9 @@
                     <td class="pkg-cell">
                       <span class="pkg-name">{{ g.name }}</span>
                       @if (g.ecosystem) { <span class="eco-tag">{{ g.ecosystem }}</span> }
+                      @if (g.kev) {
+                        <span class="kev-tag" matTooltip="At least one of these CVEs is in CISA's Known Exploited Vulnerabilities catalog">KEV</span>
+                      }
                     </td>
                     <td class="mono">{{ g.version }}</td>
                     @if (scope() === 'all') {
@@ -413,7 +454,10 @@
                             @for (f of g.findings; track f.id) {
                               <tr>
                                 <td><span class="sev-chip" [class]="f.sev">{{ f.sev }}</span></td>
-                                <td><a class="cve-link" [routerLink]="['/reports/vulnerabilities', f.cveId]">{{ f.cveId }}</a></td>
+                                <td>
+                                  <a class="cve-link" [routerLink]="['/reports/vulnerabilities', f.cveId]">{{ f.cveId }}</a>
+                                  @if (f.kev) { <span class="kev-tag">KEV</span> }
+                                </td>
                                 <td>
                                   @switch (f.fix) {
                                     @case ('ok') { <span class="fix ok mono">{{ f.fixedVersion }}</span> }
