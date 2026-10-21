@@ -3,39 +3,44 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-    AddBranchRequest,
-    ApiResponse,
-    BranchConfigDto,
-    CreateProjectRequest,
-    DashboardSummary,
-    DiscoveryImportRequest,
-    DiscoveryImportResponse,
-    DiscoveryListRequest,
-    DiscoveryListResponse,
-    ExecutiveSummaryReport,
-    InstanceDto,
-    InstanceSummary,
-    PackageInventory,
-    PagedResult,
-    ProjectConfigurationDto,
-    ProjectDetailReport,
-    ProjectDto,
-    ProjectSummary,
-    ProjectSummaryDto,
-    RepositoryConfigDto,
-    ScanRun,
-    ScheduleSettingsDto,
-    SeverityTrend,
-    TriggerScanRequest,
-    TriggerScanResponse,
-    UpdateBranchRequest,
-    UpdateInstanceRequest,
-    UpdateProjectRequest,
-    UpdateRepositoryRequest,
-    UpdateScheduleSettingsRequest,
-    Vulnerability,
-    VulnerabilityDetailReport,
-    VulnerabilitySummaryItem,
+  AddBranchRequest,
+  ApiResponse,
+  BranchConfigDto,
+  CreateProjectRequest,
+  DashboardSummary,
+  DiscoveryImportRequest,
+  DiscoveryImportResponse,
+  DiscoveryListRequest,
+  DiscoveryListResponse,
+  ExecutiveSummaryReport,
+  InstanceDto,
+  InstanceSummary,
+  PackageInventory,
+  PagedResult,
+  ProjectConfigurationDto,
+  ProjectDetailReport,
+  ProjectDto,
+  ProjectSummary,
+  ProjectSummaryDto,
+  RepositoryConfigDto,
+  ScanRun,
+  ScheduleSettingsDto,
+  SeverityTrend,
+  TriggerScanRequest,
+  TriggerScanResponse,
+  UpdateBranchRequest,
+  UpdateInstanceRequest,
+  UpdateProjectRequest,
+  UpdateRepositoryRequest,
+  UpdateScheduleSettingsRequest,
+  Vulnerability,
+  VulnerabilityDetailReport,
+  VulnerabilitySummaryItem,
+  AuditLogDto,
+  AuditLogFilter,
+  CreateUserRequest,
+  UserDto,
+  UserInfo,
 } from '../models/api.models';
 import { EmailStatusResponse, SmtpConfigurationDto, SmtpConfigurationRequest, TestEmailRequest } from '../models/smtp.models';
 
@@ -297,6 +302,60 @@ export class ApiService {
 
   downloadSbom(scanRunId: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/packages/scan/${scanRunId}/sbom/download`, { responseType: 'blob' });
+  }
+
+  // ── Administration: users (admin only) ─────────────────────────────
+  getUsers(): Observable<ApiResponse<UserDto[]>> {
+    return this.http.get<ApiResponse<UserDto[]>>(`${this.baseUrl}/users`);
+  }
+
+  createUser(request: CreateUserRequest): Observable<ApiResponse<UserInfo>> {
+    return this.http.post<ApiResponse<UserInfo>>(`${this.baseUrl}/users`, request);
+  }
+
+  setUserRole(id: string, role: string): Observable<ApiResponse<UserDto>> {
+    return this.http.put<ApiResponse<UserDto>>(`${this.baseUrl}/users/${id}/role`, { role });
+  }
+
+  deactivateUser(id: string, reason: string): Observable<ApiResponse<UserDto>> {
+    return this.http.post<ApiResponse<UserDto>>(`${this.baseUrl}/users/${id}/deactivate`, { reason });
+  }
+
+  activateUser(id: string): Observable<ApiResponse<UserDto>> {
+    return this.http.post<ApiResponse<UserDto>>(`${this.baseUrl}/users/${id}/activate`, {});
+  }
+
+  unlockUser(id: string): Observable<ApiResponse<UserDto>> {
+    return this.http.post<ApiResponse<UserDto>>(`${this.baseUrl}/users/${id}/unlock`, {});
+  }
+
+  resetUserPassword(id: string, newPassword: string): Observable<ApiResponse<UserDto>> {
+    return this.http.post<ApiResponse<UserDto>>(`${this.baseUrl}/users/${id}/reset-password`, { newPassword });
+  }
+
+  reviewUser(id: string, note?: string): Observable<ApiResponse<UserDto>> {
+    return this.http.post<ApiResponse<UserDto>>(`${this.baseUrl}/users/${id}/review`, { note });
+  }
+
+  exportAccessReviewCsv(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/users/access-review/export/csv`, { responseType: 'blob' });
+  }
+
+  // ── Administration: audit trail (admin only) ───────────────────────
+  getAuditLogs(filter: AuditLogFilter = {}): Observable<ApiResponse<PagedResult<AuditLogDto>>> {
+    return this.http.get<ApiResponse<PagedResult<AuditLogDto>>>(`${this.baseUrl}/audit-logs`, { params: this.auditParams(filter) });
+  }
+
+  exportAuditLogsCsv(filter: AuditLogFilter = {}): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/audit-logs/export/csv`, { params: this.auditParams(filter), responseType: 'blob' });
+  }
+
+  private auditParams(filter: AuditLogFilter): HttpParams {
+    let params = new HttpParams();
+    Object.entries(filter).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') params = params.set(k, String(v));
+    });
+    return params;
   }
 
   // ── SMTP Configuration ─────────────────────────────────────────────

@@ -167,19 +167,26 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
         if (project is null)
             return null;
 
-        // Get latest scan if not specified
+        // Scans belong to one project, so "latest" must be this project's latest — not the latest of any project,
+        // which would show another project's scan id and an empty report here.
         Guid effectiveScanId;
+        DateTime? lastScanAt = null;
         if (scanRunId.HasValue)
         {
             effectiveScanId = scanRunId.Value;
+            lastScanAt = await db.Set<ScanRun>()
+                .Where(s => s.Id == effectiveScanId)
+                .Select(s => (DateTime?)(s.CompletedAt ?? s.StartedAt))
+                .FirstOrDefaultAsync(ct);
         }
         else
         {
             var latestScan = await db.Set<ScanRun>()
-                .Where(s => s.Status == ScanStatus.Completed)
+                .Where(s => s.ProjectId == projectId && s.Status == ScanStatus.Completed)
                 .OrderByDescending(s => s.CompletedAt)
                 .FirstOrDefaultAsync(ct);
             effectiveScanId = latestScan?.Id ?? Guid.Empty;
+            lastScanAt = latestScan?.CompletedAt ?? latestScan?.StartedAt;
         }
 
         var repoIds = project.Repositories.Select(r => r.Id).ToList();
@@ -213,26 +220,49 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
             var repoPackages = allPackages.Where(p => p.RepositoryId == repo.Id).ToList();
             var repoVulns = allVulns.Where(v => v.RepositoryId == repo.Id).ToList();
 
+            // The same package version is often declared in several manifests (and so recorded once per
+            // manifest). Collapse those into one finding and keep where it occurs.
+            var packagesByVersion = repoPackages.ToLookup(p => (p.Name, p.Version));
+
+            var findings = repoVulns
+                .GroupBy(v => (v.CveId, v.PackageName, v.InstalledVersion))
+                .Select(g =>
+                {
+                    var v = g.OrderByDescending(x => x.CvssScore ?? 0).First();
+                    var declared = packagesByVersion[(v.PackageName, v.InstalledVersion)].ToList();
+                    return new ReportVulnerabilityDto
+                    {
+                        Id = v.Id,
+                        CveId = v.CveId,
+                        PackageName = v.PackageName,
+                        InstalledVersion = v.InstalledVersion,
+                        FixedVersion = g.Select(x => x.FixedVersion).FirstOrDefault(f => !string.IsNullOrEmpty(f)),
+                        Severity = v.Severity.ToString(),
+                        CvssScore = v.CvssScore,
+                        Description = v.Description,
+                        Status = v.Status.ToString(),
+                        FirstDetectedAt = g.Min(x => x.FirstDetectedAt),
+                        AgeDays = (int)(DateTime.UtcNow - g.Min(x => x.FirstDetectedAt)).TotalDays,
+                        Ecosystem = declared.Select(p => p.Ecosystem).FirstOrDefault(e => !string.IsNullOrEmpty(e)),
+                        Occurrences = g.Count(),
+                        SourceFiles = declared.Select(p => p.SourceFile)
+                            .Where(f => !string.IsNullOrEmpty(f))
+                            .Distinct()
+                            .Order()
+                            .ToList()
+                    };
+                })
+                .OrderByDescending(v => v.CvssScore ?? 0)
+                .ThenBy(v => v.CveId, StringComparer.Ordinal)
+                .ToList();
+
             return new RepositoryReportDto
             {
                 RepositoryId = repo.Id,
                 RepositoryName = repo.Name,
                 TotalPackages = repoPackages.Count,
                 VulnerablePackages = repoPackages.Count(p => p.HasVulnerabilities),
-                Vulnerabilities = repoVulns.Select(v => new ReportVulnerabilityDto
-                {
-                    Id = v.Id,
-                    CveId = v.CveId,
-                    PackageName = v.PackageName,
-                    InstalledVersion = v.InstalledVersion,
-                    FixedVersion = v.FixedVersion,
-                    Severity = v.Severity.ToString(),
-                    CvssScore = v.CvssScore,
-                    Description = v.Description,
-                    Status = v.Status.ToString(),
-                    FirstDetectedAt = v.FirstDetectedAt,
-                    AgeDays = (int)(DateTime.UtcNow - v.FirstDetectedAt).TotalDays
-                }).OrderByDescending(v => v.CvssScore ?? 0).ToList(),
+                Vulnerabilities = findings,
                 TopPackages = repoPackages
                     .OrderByDescending(p => p.HasVulnerabilities)
                     .ThenBy(p => p.Name)
@@ -255,9 +285,11 @@ public sealed class ReportService(DbContext db, ILogger<ReportService> logger) :
         {
             ProjectId = project.Id,
             ProjectName = project.Name,
+            LastScanAt = lastScanAt,
             TotalRepositories = project.Repositories.Count,
             TotalPackages = allPackages.Count,
             TotalVulnerabilities = allVulns.Count,
+            UniqueVulnerabilities = repos.Sum(r => r.Vulnerabilities.Count),
             CriticalCount = allVulns.Count(v => v.Severity == VulnerabilitySeverity.Critical),
             HighCount = allVulns.Count(v => v.Severity == VulnerabilitySeverity.High),
             MediumCount = allVulns.Count(v => v.Severity == VulnerabilitySeverity.Medium),

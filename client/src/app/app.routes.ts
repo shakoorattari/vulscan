@@ -1,10 +1,16 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
+import { adminGuard, authGuard, sessionGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./features/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./features/account/change-password.component').then((m) => m.ChangePasswordComponent),
+    canActivate: [sessionGuard],
   },
   {
     path: '',
@@ -74,6 +80,16 @@ export const routes: Routes = [
         path: 'settings/smtp',
         loadComponent: () =>
           import('./features/settings/smtp-settings.component').then((m) => m.SmtpSettingsComponent),
+      },
+      {
+        path: 'admin/users',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/users.component').then((m) => m.UsersComponent),
+      },
+      {
+        path: 'admin/audit-log',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/audit-log.component').then((m) => m.AuditLogComponent),
       },
     ],
   },

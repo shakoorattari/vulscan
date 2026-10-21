@@ -5,4 +5,7 @@
     <Project Path="src/Vulscan.Domain/Vulscan.Domain.csproj" />
     <Project Path="src/Vulscan.Infrastructure/Vulscan.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Vulscan.Tests/Vulscan.Tests.csproj" />
+  </Folder>
 </Solution>

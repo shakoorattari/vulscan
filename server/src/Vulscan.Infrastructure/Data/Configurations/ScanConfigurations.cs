@@ -106,15 +106,15 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.HasKey(a => a.Id);
         builder.HasIndex(a => a.Timestamp);
         builder.HasIndex(a => a.UserId);
+        builder.HasIndex(a => a.Action);
 
+        builder.Property(a => a.Username).HasMaxLength(256);
+        builder.Property(a => a.Outcome).HasMaxLength(20).IsRequired().HasDefaultValue("Success");
+        builder.Property(a => a.EntityId).HasMaxLength(100);
         builder.Property(a => a.Action).HasMaxLength(200).IsRequired();
         builder.Property(a => a.EntityType).HasMaxLength(100).IsRequired();
         // Details uses default string mapping
         builder.Property(a => a.IpAddress).HasMaxLength(50);
 
-        builder.HasOne(a => a.User)
-            .WithMany(u => u.AuditLogs)
-            .HasForeignKey(a => a.UserId)
-            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Vulscan.Application.Common;
 using Vulscan.Application.Interfaces;
 using Vulscan.Application.Services;
 
@@ -8,7 +9,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.AddSingleton<CredentialVault>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAuditLogQueryService, AuditLogQueryService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IVulnerabilityService, VulnerabilityService>();

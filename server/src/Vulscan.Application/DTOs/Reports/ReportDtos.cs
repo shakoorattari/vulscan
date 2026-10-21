@@ -57,9 +57,17 @@ public sealed record ProjectDetailReportDto
     public Guid ProjectId { get; init; }
     public string ProjectName { get; init; } = string.Empty;
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
+
+    /// <summary>When the scan this report reflects finished; null if the project was never scanned.</summary>
+    public DateTime? LastScanAt { get; init; }
     public int TotalRepositories { get; init; }
     public int TotalPackages { get; init; }
+
+    /// <summary>Raw finding rows, matching the Reports list and dashboard (a package listed in two manifests counts twice).</summary>
     public int TotalVulnerabilities { get; init; }
+
+    /// <summary>Distinct (CVE, package, version) findings per repository, summed — what actually needs fixing.</summary>
+    public int UniqueVulnerabilities { get; init; }
     public int CriticalCount { get; init; }
     public int HighCount { get; init; }
     public int MediumCount { get; init; }
@@ -97,6 +105,15 @@ public sealed record ReportVulnerabilityDto
     public string Status { get; init; } = string.Empty;
     public DateTime FirstDetectedAt { get; init; }
     public int AgeDays { get; init; }
+
+    /// <summary>Package ecosystem (npm, nuget, …), when the package is still in the scan's inventory.</summary>
+    public string? Ecosystem { get; init; }
+
+    /// <summary>How many identical finding rows were collapsed into this one (same CVE, package and version).</summary>
+    public int Occurrences { get; init; } = 1;
+
+    /// <summary>Manifest/lock files in the repository that declare this package version.</summary>
+    public List<string> SourceFiles { get; init; } = [];
 }
 
 /// <summary>

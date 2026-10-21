@@ -9,6 +9,7 @@ namespace Vulscan.Infrastructure.Data;
 public class VulscanDbContext(DbContextOptions<VulscanDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AzureDevOpsInstance> AzureDevOpsInstances => Set<AzureDevOpsInstance>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Repository> Repositories => Set<Repository>();

@@ -1,12 +1,12 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Vulscan.Application.Common;
 using Vulscan.Application.DTOs.Instances;
 using Vulscan.Application.Interfaces;
 using Vulscan.Domain.Entities;
 
 namespace Vulscan.Application.Services;
 
-public sealed class InstanceService(DbContext dbContext) : IInstanceService
+public sealed class InstanceService(DbContext dbContext, CredentialVault vault) : IInstanceService
 {
     public async Task<List<InstanceDto>> GetAllAsync()
     {
@@ -58,11 +58,7 @@ public sealed class InstanceService(DbContext dbContext) : IInstanceService
 
         if (!string.IsNullOrEmpty(request.Username) || !string.IsNullOrEmpty(request.Password))
         {
-            instance.CredentialReference = JsonSerializer.Serialize(new
-            {
-                username = request.Username ?? "",
-                password = request.Password ?? "",
-            });
+            instance.CredentialReference = vault.Pack(request.Username ?? "", request.Password ?? "");
         }
 
         await dbContext.SaveChangesAsync();

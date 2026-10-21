@@ -16,53 +16,93 @@
         </div>
       }
 
-      <form (ngSubmit)="onLogin()" class="login-form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Username</mat-label>
-          <input
-            matInput
-            [(ngModel)]="username"
-            name="username"
-            required
-            autocomplete="username"
-          />
-          <mat-icon matSuffix>person</mat-icon>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Password</mat-label>
-          <input
-            matInput
-            [type]="hidePassword() ? 'password' : 'text'"
-            [(ngModel)]="password"
-            name="password"
-            required
-            autocomplete="current-password"
-          />
+      @if (config(); as cfg) {
+        @if (cfg.entraEnabled) {
           <button
-            mat-icon-button
-            matSuffix
+            mat-flat-button
+            color="primary"
             type="button"
-            (click)="hidePassword.set(!hidePassword())"
+            class="full-width login-button microsoft-button"
+            [disabled]="microsoftBusy()"
+            (click)="signInWithMicrosoft()"
           >
-            <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            @if (microsoftBusy()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>badge</mat-icon>
+            }
+            <span>{{ microsoftBusy() ? 'Signing in…' : 'Sign in with Microsoft' }}</span>
           </button>
-        </mat-form-field>
+        }
 
-        <button
-          mat-flat-button
-          color="primary"
-          type="submit"
-          class="full-width login-button"
-          [disabled]="loading()"
-        >
-          @if (loading()) {
-            <mat-spinner diameter="20"></mat-spinner>
-          } @else {
-            Sign In
-          }
-        </button>
-      </form>
+        @if (cfg.entraEnabled && cfg.localEnabled) {
+          <div class="or-divider"><span>or</span></div>
+        }
+
+        @if (cfg.localEnabled) {
+        <form (ngSubmit)="onLogin()" class="login-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Username</mat-label>
+            <input
+              matInput
+              [(ngModel)]="username"
+              name="username"
+              required
+              autocomplete="username"
+            />
+            <mat-icon matSuffix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <input
+              matInput
+              [type]="hidePassword() ? 'password' : 'text'"
+              [(ngModel)]="password"
+              name="password"
+              required
+              autocomplete="current-password"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="hidePassword.set(!hidePassword())"
+            >
+              <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            class="full-width login-button"
+            [disabled]="loading()"
+          >
+            @if (loading()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              Sign In
+            }
+          </button>
+        </form>
+        }
+
+        @if (!cfg.entraEnabled && !cfg.localEnabled) {
+          <div class="error-banner">
+            <mat-icon>block</mat-icon>
+            <span>No sign-in method is enabled. Contact the SDD security team.</span>
+          </div>
+        }
+      } @else if (configError()) {
+        <div class="error-banner">
+          <mat-icon>cloud_off</mat-icon>
+          <span>Unable to reach the server. Please try again shortly.</span>
+        </div>
+      } @else {
+        <div class="config-loading"><mat-spinner diameter="28"></mat-spinner></div>
+      }
     </mat-card-content>
 
     <mat-card-footer>

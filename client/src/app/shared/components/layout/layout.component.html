@@ -43,6 +43,16 @@
             <span class="nav-label">Reports</span>
           </a>
           @if (auth.isAdmin()) {
+            <a class="nav-item" routerLink="/admin/users" routerLinkActive="active">
+              <span class="nav-indicator"></span>
+              <mat-icon>manage_accounts</mat-icon>
+              <span class="nav-label">Users</span>
+            </a>
+            <a class="nav-item" routerLink="/admin/audit-log" routerLinkActive="active">
+              <span class="nav-indicator"></span>
+              <mat-icon>policy</mat-icon>
+              <span class="nav-label">Audit Log</span>
+            </a>
             <a class="nav-item" routerLink="/settings" routerLinkActive="active">
               <span class="nav-indicator"></span>
               <mat-icon>settings</mat-icon>
@@ -62,6 +72,12 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #userMenu="matMenu" xPosition="before">
+              @if (auth.user()?.authProvider !== 'Entra') {
+                <button mat-menu-item routerLink="/change-password">
+                  <mat-icon>lock_reset</mat-icon>
+                  <span>Change password</span>
+                </button>
+              }
               <button mat-menu-item (click)="auth.logout()">
                 <mat-icon>logout</mat-icon>
                 <span>Sign out</span>

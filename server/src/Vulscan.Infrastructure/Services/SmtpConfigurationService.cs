@@ -11,12 +11,15 @@ public class SmtpConfigurationService : ISmtpConfigurationService
 {
     private readonly VulscanDbContext _dbContext;
     private readonly ILogger<SmtpConfigurationService> _logger;
+    private readonly ISecretProtector _protector;
 
     public SmtpConfigurationService(
         VulscanDbContext dbContext,
+        ISecretProtector protector,
         ILogger<SmtpConfigurationService> logger)
     {
         _dbContext = dbContext;
+        _protector = protector;
         _logger = logger;
     }
 
@@ -55,7 +58,7 @@ public class SmtpConfigurationService : ISmtpConfigurationService
             UseSsl = request.UseSsl,
             UseStartTls = request.UseStartTls,
             Username = request.Username,
-            Password = request.Password, // TODO: Encrypt in production
+            Password = string.IsNullOrEmpty(request.Password) ? null : _protector.Protect(request.Password),
             FromEmail = request.FromEmail,
             FromName = request.FromName,
             ReplyToEmail = request.ReplyToEmail,
@@ -86,7 +89,7 @@ public class SmtpConfigurationService : ISmtpConfigurationService
         
         // Only update password if provided
         if (!string.IsNullOrEmpty(request.Password))
-            config.Password = request.Password; // TODO: Encrypt in production
+            config.Password = _protector.Protect(request.Password);
 
         config.FromEmail = request.FromEmail;
         config.FromName = request.FromName;

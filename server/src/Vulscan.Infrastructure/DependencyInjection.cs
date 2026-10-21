@@ -1,10 +1,15 @@
+using System.Security.Cryptography.X509Certificates;
+using Vulscan.Application.Auth;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Vulscan.Application.Interfaces;
 using Vulscan.Infrastructure.BackgroundServices;
 using Vulscan.Infrastructure.Clients;
 using Vulscan.Infrastructure.Data;
+using Vulscan.Infrastructure.Security;
 using Vulscan.Infrastructure.Services;
 
 namespace Vulscan.Infrastructure;
@@ -48,6 +53,14 @@ public static class DependencyInjection
         // Infrastructure services
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<IAuditService, AuditService>();
+        AddSecretProtection(services, configuration);
+
+        // Authentication & access control
+        services.AddSingleton(configuration.GetSection("Auth").Get<AuthOptions>() ?? new AuthOptions());
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IEntraTokenValidator, EntraTokenValidator>();
         services.AddScoped<ISmtpConfigurationService, SmtpConfigurationService>();
         services.AddScoped<IEmailService, EmailService>();
 
@@ -83,12 +96,53 @@ public static class DependencyInjection
         // Dependency scanner for vulnerability detection
         services.AddScoped<IDependencyScanner, DependencyScanner>();
 
-        // Background worker for processing scans
-        services.AddHostedService<ScanBackgroundWorker>();
+        // Background jobs (scan worker + cron scheduler). Disable with BackgroundJobs:Enabled=false on instances that
+        // should only serve the API (e.g. a second instance for diagnostics, or API replicas split from workers) —
+        // otherwise every instance polls the same queue.
+        if (configuration.GetValue("BackgroundJobs:Enabled", true))
+        {
+            // Background worker for processing scans
+            services.AddHostedService<ScanBackgroundWorker>();
 
-        // Cron-based scheduler that enqueues scans (global + per-project overrides)
-        services.AddHostedService<ProjectScanScheduler>();
+            // Cron-based scheduler that enqueues scans (global + per-project overrides)
+            services.AddHostedService<ProjectScanScheduler>();
+
+            // Removal of unused access
+            services.AddHostedService<DormantAccountSweeper>();
+        }
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers encryption-at-rest for stored secrets. The key ring is persisted outside the database
+    /// (a database backup alone must not be enough to decrypt the credentials inside it).
+    /// <list type="bullet">
+    /// <item><c>DataProtection:KeysPath</c> — key ring directory (default: <c>~/.vulscan/keys</c>). Mount a persistent, backed-up volume in containers.</item>
+    /// <item><c>DataProtection:CertificatePath</c> / <c>CertificatePassword</c> — optional X.509 certificate that encrypts the key ring at rest (recommended in production).</item>
+    /// </list>
+    /// </summary>
+    private static void AddSecretProtection(IServiceCollection services, IConfiguration configuration)
+    {
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (string.IsNullOrWhiteSpace(keysPath))
+            keysPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vulscan", "keys");
+
+        Directory.CreateDirectory(keysPath);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(keysPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var builder = services.AddDataProtection()
+            .SetApplicationName("Vulscan")
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+
+        var certPath = configuration["DataProtection:CertificatePath"];
+        if (!string.IsNullOrWhiteSpace(certPath))
+        {
+            builder.ProtectKeysWithCertificate(
+                X509CertificateLoader.LoadPkcs12FromFile(certPath, configuration["DataProtection:CertificatePassword"]));
+        }
+
+        services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
     }
 }

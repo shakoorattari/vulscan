@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Vulscan.Application.Common;
 using Vulscan.Application.Interfaces;
 using Vulscan.Domain.Entities;
 using Vulscan.Domain.Enums;
@@ -18,6 +19,7 @@ public sealed class ScanProcessor(
     IAzureDevOpsClient azureDevOpsClient,
     IDependencyScanner dependencyScanner,
     IEmailService emailService,
+    CredentialVault vault,
     ILogger<ScanProcessor> logger) : IScanProcessor
 {
     private static readonly string[] DependencyFilePatterns =
@@ -71,8 +73,8 @@ public sealed class ScanProcessor(
                 ? project.CredentialReference
                 : instance.CredentialReference;
 
-            var creds = ParseCredentials(credSource ?? string.Empty);
-            if (string.IsNullOrEmpty(creds.Username) || string.IsNullOrEmpty(creds.Password))
+            var creds = vault.Unpack(credSource);
+            if (creds.IsEmpty)
             {
                 await FailScanAsync(scanRun, "No credentials available for this project (neither project-specific nor instance-shared).", ct);
                 return;
@@ -141,7 +143,7 @@ public sealed class ScanProcessor(
     private async Task ProcessRepositoryAsync(
         AzureDevOpsInstance instance, Project project,
         AzureDevOpsRepo repo,
-        (string Username, string Password) creds,
+        StoredCredentials creds,
         ScanRun scanRun, ScanStats stats, CancellationToken ct)
     {
         logger.LogInformation("───────────────────────────────────────────────────────────────");
@@ -236,7 +238,7 @@ public sealed class ScanProcessor(
     private async Task<(int packages, int vulnerabilities)> ScanRepositoryBranchAsync(
         AzureDevOpsInstance instance, Project project,
         AzureDevOpsRepo repo, Repository repoEntity, string branch,
-        (string Username, string Password) creds,
+        StoredCredentials creds,
         ScanRun scanRun, ScanStats stats, CancellationToken ct)
     {
         var items = await azureDevOpsClient.GetItemsAsync(
@@ -403,21 +405,6 @@ public sealed class ScanProcessor(
         scanRun.ErrorLog = error;
         await dbContext.SaveChangesAsync(ct);
         logger.LogError("❌ SCAN #{ScanRunId} FAILED: {Error}", scanRun.Id, error);
-    }
-
-    private static (string Username, string Password) ParseCredentials(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return ("", "");
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            return (
-                root.TryGetProperty("username", out var u) ? u.GetString() ?? "" : "",
-                root.TryGetProperty("password", out var p) ? p.GetString() ?? "" : ""
-            );
-        }
-        catch { return ("", ""); }
     }
 
     private sealed class ScanStats

@@ -1,0 +1,79 @@
+<div class="admin-page">
+  <header class="page-hero">
+    <div class="hero-content">
+      <div class="hero-badge"><mat-icon>policy</mat-icon><span>Audit trail</span></div>
+      <h1>Audit log</h1>
+      <p class="hero-subtitle">Sign-ins, access changes, configuration changes, exports and denied requests — who did what, from where, and the outcome.</p>
+    </div>
+    <div class="hero-actions">
+      <button mat-stroked-button class="action-btn" (click)="exportCsv()"><mat-icon>download</mat-icon><span>Export CSV</span></button>
+    </div>
+  </header>
+
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <form class="filter-grid" (ngSubmit)="apply()">
+        <mat-form-field appearance="outline"><mat-label>From</mat-label><input matInput type="date" [(ngModel)]="from" name="from" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>To</mat-label><input matInput type="date" [(ngModel)]="to" name="to" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>User</mat-label><input matInput [(ngModel)]="username" name="username" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Action contains</mat-label><input matInput [(ngModel)]="action" name="action" placeholder="e.g. Auth.Login" /></mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Outcome</mat-label>
+          <mat-select [(ngModel)]="outcome" name="outcome">
+            <mat-option value="">Any</mat-option>
+            <mat-option value="Success">Success</mat-option>
+            <mat-option value="Failure">Failure</mat-option>
+            <mat-option value="Denied">Denied</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Search details</mat-label><input matInput [(ngModel)]="search" name="search" /></mat-form-field>
+        <div class="filter-actions">
+          <button mat-flat-button color="primary" type="submit"><mat-icon>search</mat-icon><span>Apply</span></button>
+          <button mat-button type="button" (click)="reset()">Reset</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-content>
+      @if (loading()) {
+        <div class="state-box"><mat-spinner diameter="40"></mat-spinner><p>Loading audit log…</p></div>
+      } @else if (!result()?.items?.length) {
+        <div class="state-box"><mat-icon>policy</mat-icon><p>No audit records match these filters.</p></div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Time (local)</th><th>User</th><th>Action</th><th>Target</th><th>Outcome</th><th>IP address</th></tr></thead>
+            <tbody>
+              @for (r of result()!.items; track r.id) {
+                <tr class="clickable" (click)="toggle(r.id)" [attr.aria-expanded]="expanded() === r.id">
+                  <td class="mono">{{ r.timestamp | date: 'yyyy-MM-dd HH:mm:ss' }}</td>
+                  <td>{{ r.username || '—' }}</td>
+                  <td class="primary-text mono">{{ r.action }}</td>
+                  <td>
+                    {{ r.entityType }}
+                    @if (r.entityId) { <div class="muted mono">{{ r.entityId }}</div> }
+                  </td>
+                  <td><span class="badge" [class]="r.outcome.toLowerCase()">{{ r.outcome }}</span></td>
+                  <td class="mono">{{ r.ipAddress || '—' }}</td>
+                </tr>
+                @if (expanded() === r.id) {
+                  <tr class="details-row"><td colspan="6"><pre class="details-pre">{{ pretty(r.details) || 'No further details recorded.' }}</pre></td></tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <mat-paginator
+          [length]="result()!.totalCount"
+          [pageSize]="pageSize"
+          [pageIndex]="page - 1"
+          [pageSizeOptions]="[25, 50, 100, 200]"
+          (page)="onPage($event)"
+          showFirstLastButtons
+        ></mat-paginator>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

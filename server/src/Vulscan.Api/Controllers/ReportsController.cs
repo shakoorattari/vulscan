@@ -81,12 +81,12 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
                 csv.AppendLine(string.Join(",",
                     EscapeCsv(report.ProjectName),
                     EscapeCsv(repo.RepositoryName),
-                    pkg.Ecosystem,
+                    EscapeCsv(pkg.Ecosystem),
                     EscapeCsv(pkg.Name),
-                    pkg.Version,
+                    EscapeCsv(pkg.Version),
                     EscapeCsv(pkg.SourceFile ?? ""),
                     pkg.HasVulnerabilities,
-                    pkg.Purl ?? ""));
+                    EscapeCsv(pkg.Purl)));
             }
         }
 
@@ -109,7 +109,7 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
             return NotFound(ApiResponse.Fail("Project not found."));
 
         var csv = new StringBuilder();
-        csv.AppendLine("Project,Repository,CVE,Package,InstalledVersion,FixedVersion,Severity,CVSS,Status,AgeDays,Description");
+        csv.AppendLine("Project,Repository,CVE,Package,InstalledVersion,FixedVersion,Severity,CVSS,Status,AgeDays,Description,Occurrences,SourceFiles");
 
         foreach (var repo in report.Repositories)
         {
@@ -118,15 +118,17 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
                 csv.AppendLine(string.Join(",",
                     EscapeCsv(report.ProjectName),
                     EscapeCsv(repo.RepositoryName),
-                    vuln.CveId,
+                    EscapeCsv(vuln.CveId),
                     EscapeCsv(vuln.PackageName),
-                    vuln.InstalledVersion,
-                    vuln.FixedVersion ?? "",
+                    EscapeCsv(vuln.InstalledVersion),
+                    EscapeCsv(vuln.FixedVersion),
                     vuln.Severity,
                     vuln.CvssScore?.ToString("F1") ?? "",
                     vuln.Status,
                     vuln.AgeDays,
-                    EscapeCsv(vuln.Description ?? "")));
+                    EscapeCsv(vuln.Description ?? ""),
+                    vuln.Occurrences,
+                    EscapeCsv(string.Join("; ", vuln.SourceFiles))));
             }
         }
 
@@ -181,11 +183,11 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
         foreach (var v in summaries)
         {
             csv.AppendLine(string.Join(",",
-                v.CveId,
+                EscapeCsv(v.CveId),
                 v.Severity,
                 v.CvssScore?.ToString("F1") ?? "",
                 EscapeCsv(v.PackageName),
-                v.FixedVersion ?? "",
+                EscapeCsv(v.FixedVersion),
                 v.AffectedRepositories,
                 v.TotalOccurrences,
                 EscapeCsv(v.Description ?? "")));
@@ -210,11 +212,6 @@ public sealed class ReportsController(IReportService reportService, ILogger<Repo
 
     // ── Helpers ──────────────────────────────────────────────────────
 
-    private static string EscapeCsv(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        return value;
-    }
+    // Also neutralises spreadsheet formula injection — exported fields include advisory text and package names from outside.
+    private static string EscapeCsv(string? value) => Vulscan.Application.Common.Csv.Escape(value);
 }

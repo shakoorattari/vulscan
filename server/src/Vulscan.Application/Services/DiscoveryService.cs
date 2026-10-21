@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Vulscan.Application.Common;
 using Vulscan.Application.DTOs.Discovery;
 using Vulscan.Application.Interfaces;
 using Vulscan.Domain.Entities;
@@ -9,7 +9,8 @@ namespace Vulscan.Application.Services;
 
 public sealed class DiscoveryService(
     DbContext dbContext,
-    IAzureDevOpsClient azureDevOpsClient) : IDiscoveryService
+    IAzureDevOpsClient azureDevOpsClient,
+    CredentialVault vault) : IDiscoveryService
 {
     public async Task<DiscoveryListResponse> ListProjectsAsync(
         DiscoveryListRequest request, CancellationToken ct = default)
@@ -30,11 +31,7 @@ public sealed class DiscoveryService(
             .Include(i => i.Projects)
             .FirstOrDefaultAsync(i => i.Url == serverUrl && i.Collection == collection, ct);
 
-        var sharedCreds = JsonSerializer.Serialize(new
-        {
-            username = request.Username,
-            password = request.Password,
-        });
+        var sharedCreds = vault.Pack(request.Username, request.Password);
 
         if (instance is null)
         {
@@ -88,7 +85,7 @@ public sealed class DiscoveryService(
             throw new InvalidOperationException("Instance has no shared credentials configured. Run discovery first.");
 
         // Re-fetch projects to validate names and get IDs
-        var creds = ParseCreds(instance.CredentialReference);
+        var creds = vault.Unpack(instance.CredentialReference);
         var azureProjects = await azureDevOpsClient.GetProjectsAsync(
             instance.Url, instance.Collection, creds.Username, creds.Password, ct);
 
@@ -137,22 +134,5 @@ public sealed class DiscoveryService(
             .Select(p => p.Id));
 
         return new DiscoveryImportResponse { Imported = imported, Skipped = skipped, ProjectIds = newIds };
-    }
-
-    private static (string Username, string Password) ParseCreds(string json)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            return (
-                root.TryGetProperty("username", out var u) ? u.GetString() ?? "" : "",
-                root.TryGetProperty("password", out var p) ? p.GetString() ?? "" : ""
-            );
-        }
-        catch
-        {
-            return ("", "");
-        }
     }
 }

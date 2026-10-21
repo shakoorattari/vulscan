@@ -418,7 +418,7 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
 
         foreach (var p in packages)
         {
-            csv.AppendLine($"{p.Ecosystem},{EscapeCsv(p.Name)},{p.Version},{EscapeCsv(p.SourceFile)},{p.IsDirect},{p.HasVulnerabilities},{p.License ?? ""},{p.Purl ?? ""}");
+            csv.AppendLine($"{EscapeCsv(p.Ecosystem)},{EscapeCsv(p.Name)},{EscapeCsv(p.Version)},{EscapeCsv(p.SourceFile)},{p.IsDirect},{p.HasVulnerabilities},{EscapeCsv(p.License)},{EscapeCsv(p.Purl)}");
         }
 
         var bytes = Encoding.UTF8.GetBytes(csv.ToString());
@@ -516,13 +516,6 @@ public class PackagesController(VulscanDbContext db, ILogger<PackagesController>
         return Ok(result);
     }
 
-    private static string EscapeCsv(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-        return value;
-    }
+    // Also neutralises spreadsheet formula injection — exported fields include package names/versions from outside.
+    private static string EscapeCsv(string? value) => Vulscan.Application.Common.Csv.Escape(value);
 }

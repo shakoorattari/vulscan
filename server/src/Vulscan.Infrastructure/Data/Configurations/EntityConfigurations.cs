@@ -17,7 +17,8 @@ public class AzureDevOpsInstanceConfiguration : IEntityTypeConfiguration<AzureDe
         builder.Property(i => i.Url).HasMaxLength(500).IsRequired();
         builder.Property(i => i.Collection).HasMaxLength(200).IsRequired();
         builder.Property(i => i.AuthMethod).HasConversion<string>().HasMaxLength(50).IsRequired();
-        builder.Property(i => i.CredentialReference).HasMaxLength(500);
+        // Encrypted payloads are considerably longer than the plaintext JSON they replace.
+        builder.Property(i => i.CredentialReference).HasMaxLength(2000);
         builder.Property(i => i.IsEnabled).HasDefaultValue(true);
     }
 }
@@ -34,7 +35,7 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.Property(p => p.Name).HasMaxLength(300).IsRequired();
         builder.Property(p => p.AzureProjectId).HasMaxLength(200).IsRequired();
         builder.Property(p => p.Url).HasMaxLength(1000).IsRequired();
-        builder.Property(p => p.CredentialReference).HasMaxLength(1000);
+        builder.Property(p => p.CredentialReference).HasMaxLength(2000);
         builder.Property(p => p.DefaultBranch).HasMaxLength(200);
         builder.Property(p => p.IsEnabled).HasDefaultValue(true);
         builder.Property(p => p.CronExpression).HasMaxLength(100);

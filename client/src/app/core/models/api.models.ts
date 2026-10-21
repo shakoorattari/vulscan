@@ -7,6 +7,8 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   expiresAt: string;
+  /** True when the user must set a new password before the API will serve anything else. */
+  mustChangePassword: boolean;
   user: UserInfo;
 }
 
@@ -15,6 +17,71 @@ export interface UserInfo {
   username: string;
   email: string;
   role: string;
+  authProvider: string;
+}
+
+export interface AuthConfig {
+  localEnabled: boolean;
+  entraEnabled: boolean;
+  tenantId?: string;
+  clientId?: string;
+  authority?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+// ── Administration: users & audit ─────────────────────────────────────
+export interface UserDto {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  authProvider: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt?: string;
+  lockedUntil?: string;
+  mustChangePassword: boolean;
+  lastAccessReviewAt?: string;
+  lastAccessReviewBy?: string;
+  reviewOverdue: boolean;
+  deactivatedAt?: string;
+  deactivationReason?: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
+export interface AuditLogDto {
+  id: string;
+  timestamp: string;
+  userId?: string;
+  username?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  outcome: 'Success' | 'Failure' | 'Denied' | string;
+  ipAddress?: string;
+  details?: string;
+}
+
+export interface AuditLogFilter {
+  page?: number;
+  pageSize?: number;
+  from?: string;
+  to?: string;
+  action?: string;
+  username?: string;
+  entityType?: string;
+  outcome?: string;
+  search?: string;
 }
 
 export interface ApiResponse<T> {
@@ -295,9 +362,14 @@ export interface ProjectDetailReport {
   projectId: string;
   projectName: string;
   generatedAt: string;
+  /** When the scan this report reflects finished; absent if the project was never scanned. */
+  lastScanAt?: string;
   totalRepositories: number;
   totalPackages: number;
+  /** Raw finding rows (a package declared in two manifests counts twice). */
   totalVulnerabilities: number;
+  /** Distinct (CVE, package, version) findings per repository, summed. */
+  uniqueVulnerabilities: number;
   criticalCount: number;
   highCount: number;
   mediumCount: number;
@@ -327,6 +399,11 @@ export interface ReportVulnerability {
   status: string;
   firstDetectedAt: string;
   ageDays: number;
+  ecosystem?: string;
+  /** Identical finding rows collapsed into this one (same CVE, package and version). */
+  occurrences: number;
+  /** Manifest/lock files in the repository that declare this package version. */
+  sourceFiles: string[];
 }
 
 export interface ReportPackage {

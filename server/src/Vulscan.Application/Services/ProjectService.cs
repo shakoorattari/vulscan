@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Vulscan.Application.Common;
 using Vulscan.Application.DTOs.Projects;
@@ -9,7 +8,7 @@ using Vulscan.Domain.Enums;
 
 namespace Vulscan.Application.Services;
 
-public sealed class ProjectService(DbContext dbContext) : IProjectService
+public sealed class ProjectService(DbContext dbContext, CredentialVault vault) : IProjectService
 {
     private async Task<string> GetGlobalCronAsync(CancellationToken ct)
     {
@@ -144,11 +143,7 @@ public sealed class ProjectService(DbContext dbContext) : IProjectService
             Name = request.Name,
             AzureProjectId = projectName,
             Url = request.ProjectUrl.TrimEnd('/'),
-            CredentialReference = JsonSerializer.Serialize(new
-            {
-                username = request.Username,
-                password = request.Password,
-            }),
+            CredentialReference = vault.Pack(request.Username, request.Password),
             DefaultBranch = string.IsNullOrWhiteSpace(request.DefaultBranch) ? null : request.DefaultBranch,
             CronExpression = NormalizeCron(request.CronExpression),
             IsEnabled = true,
@@ -185,11 +180,7 @@ public sealed class ProjectService(DbContext dbContext) : IProjectService
 
         if (!string.IsNullOrEmpty(request.Username) && !string.IsNullOrEmpty(request.Password))
         {
-            project.CredentialReference = JsonSerializer.Serialize(new
-            {
-                username = request.Username,
-                password = request.Password,
-            });
+            project.CredentialReference = vault.Pack(request.Username, request.Password);
         }
 
         await dbContext.SaveChangesAsync(ct);
